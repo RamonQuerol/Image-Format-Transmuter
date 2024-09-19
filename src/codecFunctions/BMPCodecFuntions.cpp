@@ -2,9 +2,8 @@
 #include <fstream>
 #include "BMPCodecFunctions.h"
 
-using namespace std;
 
-Pixel decodePixelBMP(fstream *inputFile){
+Pixel decodePixelBMP(std::fstream *inputFile){
     Pixel pixel;
     pixel.blue = inputFile->get();
     pixel.green = inputFile->get();
@@ -14,7 +13,7 @@ Pixel decodePixelBMP(fstream *inputFile){
     return pixel;
 }
 
-int decodeBMP(fstream *inputFile, Image *decodedImage){
+int decodeBMP(std::fstream *inputFile, Image *decodedImage){
 
     unsigned short signature;
     unsigned int lenght, dataPos;
@@ -32,7 +31,7 @@ int decodeBMP(fstream *inputFile, Image *decodedImage){
     inputFile->read(reinterpret_cast<char*>(&signature), sizeof(unsigned short));
 
     if(signature != 19778){ // 19778 is 42 4D in hexadecimal, or BR in ASCII
-        cout << "Not a Bitmap";
+        std::cout << "Not a Bitmap";
         return -1;
     }
 
@@ -76,7 +75,7 @@ int decodeBMP(fstream *inputFile, Image *decodedImage){
         
         // When the row ends, the BMP format fills the space with 0s until the next multiple of 4
         // So we have to skip those bytes to get to the next row.
-        inputFile->seekg(width%4, ios::cur);
+        inputFile->seekg(width%4, std::ios::cur);
     }
 
     // Small Test

@@ -16,7 +16,7 @@ struct Metadata {
 struct Image{
     int width;
     int heigth;
-    int imageDataSize; // Not sure yet
     Metadata *metadata;
-    Pixel *imageData;
+    // The imageData array has a size of width*heigth pixels
+    Pixel *imageData; // image pixels ordered from left to right and top to bottom.
 };
