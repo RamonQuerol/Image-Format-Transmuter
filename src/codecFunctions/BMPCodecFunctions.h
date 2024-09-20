@@ -6,4 +6,4 @@
 
 void encodeBMP(Image image, std::fstream *outputFile);
 
-int decodeBMP(std::fstream *inputFile, Image *decodedImage);
+int decodeBMP(std::fstream & inputFile, Image & decodedImage);

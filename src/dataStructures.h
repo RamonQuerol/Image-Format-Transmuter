@@ -1,3 +1,4 @@
+#include <memory>
 
 // Pixel information
 struct Pixel {
@@ -18,5 +19,5 @@ struct Image{
     int heigth;
     Metadata *metadata;
     // The imageData array has a size of width*heigth pixels
-    Pixel *imageData; // image pixels ordered from left to right and top to bottom.
+    std::unique_ptr<Pixel[]> imageData; // image pixels ordered from left to right and top to bottom.
 };

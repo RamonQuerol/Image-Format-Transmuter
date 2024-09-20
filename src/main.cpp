@@ -20,7 +20,11 @@ int main(int argc, char* argv[]){
 
     Image decodedImage;
 
-    decodeBMP(&myFile, &decodedImage);
+    int err = decodeBMP(myFile, decodedImage);
+
+    for(int i = 0; i<decodedImage.heigth*decodedImage.width; ++i){
+        std::cout << decodedImage.imageData[i].blue-0 << " " << decodedImage.imageData[i].green-0 << " " << decodedImage.imageData[i].red-0 << "\n";
+    }
 
     myFile.close();
 
