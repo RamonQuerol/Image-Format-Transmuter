@@ -2,49 +2,58 @@
 #include <fstream>
 #include "BMPCodecFunctions.h"
 #include <memory>
+#include <functional>
 
 #include <math.h>
 
-std::unique_ptr<Pixel[]> decodeImgData32Bits(unsigned int width, unsigned int height, std::unique_ptr<unsigned char[]> & rawImageData){
 
-    std::unique_ptr<Pixel[]> imagePixels = std::make_unique<Pixel[]>(height*width);
+Pixel get24BitsPixel(std::unique_ptr<unsigned char[]> & rawImageData, int offSet){
+    Pixel pixel;
 
-    Pixel nPixel;
+    pixel.blue = rawImageData[offSet];
+    pixel.green = rawImageData[offSet + 1];
+    pixel.red = rawImageData[offSet + 2];
+    pixel.alpha = 255; // 24 bits Bitmap don't store alpha bits, that will be translated as the maximun alpha value (fully opaque)
 
-    for(int i = 0; i<height; ++i){
-        // BMP stores the pixels in rows
-
-        // Although the compiler would probably do this optimization, its ok doing it for the sake of readability
-
-        // The offset that determines the row you are in, 
-        // we multiply width by 4 because each pixel ocupies 4 bytes in the binary.
-        int heightOffSet = i*width*4;
-
-        for(int j = 0; j<width; ++j){
-            nPixel.blue = rawImageData[heightOffSet + j*4];
-            nPixel.green = rawImageData[heightOffSet + j*4 + 1];
-            nPixel.red = rawImageData[heightOffSet + j*4 + 2];
-            nPixel.alpha = rawImageData[heightOffSet + j*4 + 3];
-
-            // We use height-i-1 because the data is stored from botton to top, and the imageData
-            // in the Image struct should be stored from top to bottom.
-            imagePixels[(height-i-1)*width+j] = nPixel; 
-        }
-    }
-
-    return imagePixels;
+    return pixel;
 }
 
-std::unique_ptr<Pixel[]> decodeImgData24Bits(unsigned int width, unsigned int height, std::unique_ptr<unsigned char[]> & rawImageData){
+Pixel get32BitsPixel(std::unique_ptr<unsigned char[]> & rawImageData, int offSet){
+    Pixel pixel;
+
+    pixel.blue = rawImageData[offSet];
+    pixel.green = rawImageData[offSet + 1];
+    pixel.red = rawImageData[offSet + 2];
+    pixel.alpha = rawImageData[offSet + 3];
+
+    return pixel;
+}
+
+std::unique_ptr<Pixel[]> decodeColorImgData(unsigned int width, unsigned int height, 
+                std::unique_ptr<unsigned char[]> & rawImageData, unsigned int bitsPerPixel){
 
     std::unique_ptr<Pixel[]> imagePixels = std::make_unique<Pixel[]>(height*width);
     
+    int bytesPerPixel = bitsPerPixel/8;
+
     // When the row ends, the BMP format fills the space with 0s until the next multiple of 4
     // So we have to skip those bytes to get to the next row.
-    int fillerPixels = (4 - width%4)%4;
+    int fillerPixels = (4 - (width*bytesPerPixel)%4)%4; // The second %4 is there so if its 4 fillerPixels equals 0
+    int bytesPerRow = width*bytesPerPixel+fillerPixels;
 
     Pixel nPixel;
-    nPixel.alpha = 255; // 24 bits Bitmap don't store alpha bits, that will be translated as the maximun alpha value (fully opaque)
+
+    std::function<Pixel(std::unique_ptr<unsigned char[]> &, int)> getPixelFunction;
+
+    switch(bitsPerPixel){
+        case 24:
+            getPixelFunction = get24BitsPixel;
+            break;
+        case 32:
+            getPixelFunction = get32BitsPixel;
+            break;
+        // TODO Although nothing should get through here without a value, i should add a default case just in case
+    }
 
     for(int i = 0; i<height; ++i){
         // BMP stores the pixels in rows
@@ -52,13 +61,10 @@ std::unique_ptr<Pixel[]> decodeImgData24Bits(unsigned int width, unsigned int he
         // Although the compiler would probably do this optimization, its ok doing it for the sake of readability
 
         // The offset that determines the row you are in, 
-        // we multiply width by 3 because each pixel ocupies 3 bytes in the binary.
-        int heightOffSet = i*(width*3+fillerPixels);
+        int heightOffSet = i*bytesPerRow;
 
         for(int j = 0; j<width; ++j){
-            nPixel.blue = rawImageData[heightOffSet + j*3];
-            nPixel.green = rawImageData[heightOffSet + j*3 + 1];
-            nPixel.red = rawImageData[heightOffSet + j*3 + 2];
+            nPixel = getPixelFunction(rawImageData, heightOffSet + j*bytesPerPixel);
 
             // We use height-i-1 because the data is stored from botton to top, and the imageData
             // in the Image struct should be stored from top to bottom.
@@ -82,30 +88,40 @@ std::unique_ptr<Pixel[]> decodeGrayImageData(unsigned int width, unsigned int he
 
     int pixelsPerByte = 9-bitsPerPixel;
 
-    int magicNumber = width*bitsPerPixel/8;
+    int bytesPerRow = width*bitsPerPixel/8;
     if(width*bitsPerPixel%8){
-        ++magicNumber;
+        ++bytesPerRow;
     }
 
-    int fillerPixels = (4 - magicNumber%4)%4;
+    // When the row ends, the BMP format fills the space with 0s until the next multiple of 4 byte
+    // So we have to skip those bytes to get to the next row.
+    int fillerPixels = (4 - bytesPerRow%4)%4;
 
-    int statingBits = std::pow(2,8-bitsPerPixel);
-    int inverseBits = 256/statingBits;
+    // Variables needed to extract the pixels from each byte
+    int statingBitMult = std::pow(2,pixelsPerByte-1);
+    int maxPixelValue = 256/statingBitMult;
 
     for(int i = 0; i<height; ++i){
         // BMP stores the pixels in rows
 
-        int heightOffSet = i*(magicNumber+fillerPixels);
+        int heightOffSet = i*(bytesPerRow+fillerPixels);
 
-        for(int j = 0; j<magicNumber; ++j){
+        // We iterate through all the bytes in the row
+        for(int j = 0; j<bytesPerRow; ++j){
             
-            char nByteVal = rawImageData[heightOffSet + j];
+            unsigned char nByteVal = rawImageData[heightOffSet + j];
 
-            for(int k = 0, bitMult = statingBits; bitMult>0; ++k, bitMult = bitMult/inverseBits){
+            // We decode all the pixels in the byte
+            for(int k = 0, bitMult = statingBitMult; bitMult>0; ++k, bitMult = bitMult/maxPixelValue){
+                
+                //  We extract the pixel the byte
                 int greyVal = nByteVal/bitMult;
                 nByteVal =- greyVal*bitMult;
                 
-                int standarizedVal = (greyVal+1)*statingBits -1;
+                // Since the value is in another base (for example 1 in 1bit BMP is 255 in 8bit) we need to translate the values to a standarized base (8bits)
+                int standarizedVal = (greyVal+1)*statingBitMult -1;
+                
+                // In BGR/RBG images gray happens when all the values are the same.
                 nPixel.blue = standarizedVal;
                 nPixel.green = standarizedVal;
                 nPixel.red = standarizedVal;
@@ -183,22 +199,14 @@ int decodeBMP(std::fstream & inputFile, Image & decodedImage){
     // Parse the data into the pixel format
     switch(bitsPerPixel){
         case 1:
-            imagePixels = decodeGrayImageData(width,height, rawImageData, bitsPerPixel);
-            break;
         case 2:
-            imagePixels = decodeGrayImageData(width,height, rawImageData, bitsPerPixel);
-            break;
         case 4:
-            imagePixels = decodeGrayImageData(width,height, rawImageData, bitsPerPixel);
-            break;
         case 8:
             imagePixels = decodeGrayImageData(width,height, rawImageData, bitsPerPixel);
             break;
         case 24:
-            imagePixels = decodeImgData24Bits(width, height, rawImageData);
-            break;
         case 32:
-            imagePixels = decodeImgData32Bits(width, height, rawImageData);
+            imagePixels = decodeColorImgData(width, height, rawImageData, bitsPerPixel);
             break;
         default:
             std::cout << "The program has no support to bitMaps with " << bitsPerPixel << " bitsPerPixels.\n";
