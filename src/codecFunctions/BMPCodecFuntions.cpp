@@ -353,9 +353,7 @@ int decodeBMP(std::fstream & inputFile, Image & decodedImage){
     rawImageData = std::make_unique<unsigned char[]>(dataSize);
 
     // Extract the data from the file
-    for(int i = 0; i<dataSize; ++i){
-        rawImageData[i] = inputFile.get();
-    }
+    inputFile.read(reinterpret_cast<char*>(rawImageData.get()), dataSize);
 
 
     // Parse the data into the pixel format
@@ -375,10 +373,6 @@ int decodeBMP(std::fstream & inputFile, Image & decodedImage){
             return -1;
     }
 
-    // Small Test
-    // for(int i = 0; i<height*width; ++i){
-    //     std::cout << imageData[i].blue-0 << " " << imageData[i].green-0 << " " << imageData[i].red-0 << "\n";
-    // }
 
     decodedImage.heigth = height;
     decodedImage.width = width;
