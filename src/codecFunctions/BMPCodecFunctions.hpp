@@ -2,7 +2,7 @@
 #include <fstream>
 
 // Other files
-#include "dataStructures.h"
+#include "dataStructures.hpp"
 
 int encodeBMP(std::fstream & outputFile, Image & image);
 

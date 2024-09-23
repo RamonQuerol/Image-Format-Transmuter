@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fstream>
-#include "BMPCodecFunctions.h"
+#include "BMPCodecFunctions.hpp"
 #include <memory>
 #include <functional>
 
@@ -372,6 +372,7 @@ int decodeBMP(std::fstream & inputFile, Image & decodedImage){
             std::cout << "The program has no support to bitMaps with " << bitsPerPixel << " bitsPerPixels.\n";
             return -1;
     }
+
 
 
     decodedImage.heigth = height;

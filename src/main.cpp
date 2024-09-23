@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fstream>
-#include "BMPCodecFunctions.h"
+#include "BMPCodecFunctions.hpp"
 
 
 int main(int argc, char* argv[]){
