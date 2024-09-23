@@ -4,6 +4,6 @@
 // Other files
 #include "dataStructures.h"
 
-void encodeBMP(Image image, std::fstream *outputFile);
+int encodeBMP(std::fstream & outputFile, Image & image);
 
 int decodeBMP(std::fstream & inputFile, Image & decodedImage);
