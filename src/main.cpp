@@ -31,8 +31,25 @@ int main(int argc, char* argv[]){
     }
 
     Image decodedImage;
+    int err = -1;
 
-    int err = decodeBMP(inputFile, decodedImage);
+    switch(config.inputFormat){
+        case BITMAP:
+            err = decodeBMP(inputFile, decodedImage);
+            break;
+        case UNDEFINED:
+            std::cout << "You must define the input file format. Use --help to know more.\n";
+            return -4;
+        default:
+            std::cout << "The current version of the program does not support " + fileFormatToString(config.inputFormat) <<
+                    " as an input format.\n";
+            return -5;
+    }
+    
+    if(err){
+        std::cout << "Something went wrong during the decodification of the image\n";
+        return -6;
+    }
 
     inputFile.close();
 
@@ -44,7 +61,23 @@ int main(int argc, char* argv[]){
         return -4;
     }  
 
-    err = encodeBMP(outputFile, decodedImage);
+    switch(config.outputFormat){
+        case BITMAP:
+            err = encodeBMP(outputFile, decodedImage);
+            break;
+        case UNDEFINED:
+            std::cout << "You must define the output file format. Use --help to know more.\n";
+            return -4;
+        default:
+            std::cout << "The current version of the program does not support " + fileFormatToString(config.outputFormat) <<
+                    " as an output format.\n";
+            return -5;
+    }
+    
+    if(err){
+        std::cout << "Something went wrong during the creation of the new image\n";
+        return -6;
+    }
 
     outputFile.close();
 
