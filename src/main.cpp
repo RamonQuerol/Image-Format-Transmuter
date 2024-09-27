@@ -1,7 +1,10 @@
 #include <iostream>
 #include <fstream>
-#include "BMPCodecFunctions.hpp"
+
 #include "init.hpp"
+#include "dataStructures.hpp"
+#include "BMPCodecFunctions.hpp"
+#include "PNGCodecFunctions.hpp"
 
 
 int main(int argc, char* argv[]){
@@ -36,6 +39,10 @@ int main(int argc, char* argv[]){
     switch(config.inputFormat){
         case BITMAP:
             err = decodeBMP(inputFile, decodedImage);
+            break;
+        case PNG:
+            err = decodePNG(inputFile, decodedImage);
+            return 0;
             break;
         case UNDEFINED:
             std::cout << "You must define the input file format. Use --help to know more.\n";

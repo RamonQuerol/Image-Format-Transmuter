@@ -1,5 +1,9 @@
 #include <memory>
 
+
+#ifndef DATASTRUCTURES_H
+#define DATASTRUCTURES_H
+
 // Pixel information
 struct Pixel {
     unsigned char red;
@@ -21,3 +25,6 @@ struct Image{
     // The imageData array has a size of width*heigth pixels
     std::unique_ptr<Pixel[]> imageData; // image pixels ordered from left to right and top to bottom.
 };
+
+
+#endif
