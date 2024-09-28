@@ -3,8 +3,8 @@
 
 #include "init.hpp"
 #include "dataStructures.hpp"
-#include "BMPCodecFunctions.hpp"
-#include "PNGCodecFunctions.hpp"
+#include "bmpCodecFunctions.hpp"
+#include "pngCodecFunctions.hpp"
 
 
 int main(int argc, char* argv[]){

@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fstream>
-#include "BMPCodecFunctions.hpp"
+#include "bmpCodecFunctions.hpp"
 #include <memory>
 #include <functional>
 

@@ -1,9 +1,8 @@
 #include <iostream>
 
-#include "PNGCodecFunctions.hpp"
-#include "PNGChunkManagement.hpp"
+#include "pngCodecFunctions.hpp"
+#include "pngChunkManagement.hpp"
 #include "fileDataManagementUtils.hpp"
-#include "PNGAlgorithms.hpp"
 
 #define PNG_SIGNATURE 727905341920923785 
 
@@ -70,12 +69,14 @@ int decodePNG(std::fstream & inputFile, Image & decodedImage){
             return -2;
         }
 
-        std::cout << chunkLenght << "\n";
 
         switch (chunkName){
+            case IDAT:
+                
+                break;
             case IEND:
-            iendChunkReached = true;
-            break;
+                iendChunkReached = true;
+                break;
         }
 
 

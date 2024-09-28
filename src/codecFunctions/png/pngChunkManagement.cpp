@@ -1,7 +1,8 @@
 
-#include "PNGChunkManagement.hpp"
+
+#include "pngChunkManagement.hpp"
 #include "fileDataManagementUtils.hpp"
-#include "PNGAlgorithms.hpp"
+#include "pngCRC.hpp"
 
 int getChunk(std::fstream & inputFile, unsigned int & chunkLenght, unsigned int & chunkName, 
                     std::unique_ptr<unsigned char[]> & rawChunkData){
@@ -40,4 +41,14 @@ int getChunk(std::fstream & inputFile, unsigned int & chunkLenght, unsigned int 
 
     return 0;
 
+}
+
+
+/// IDAT Chunk
+
+int handleIDATChunk(std::unique_ptr<unsigned char[]> & rawData, unsigned int & chunkLenght,
+                        unsigned char filterMethod, unsigned char colortype,
+                        std::unique_ptr<Pixel[]> & outputData){
+    
+    return 0;
 }

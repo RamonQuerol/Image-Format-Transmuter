@@ -1,4 +1,4 @@
-#include "PNGAlgorithms.hpp"
+#include "pngCRC.hpp"
 
 ///// CRC (Cyclic Redundancy Check) ////
 
