@@ -5,6 +5,8 @@
 // This algorithm is composed mostly of C code since its the implementation that appears in the
 // PNG specification http://www.libpng.org/pub/png/spec/1.2/PNG-CRCAppendix.html 
 
+// It only has a few modifications to work better with the project logic
+
 /* Table of CRCs of all 8-bit messages. */
 unsigned long crc_table[256];
 

@@ -16,11 +16,10 @@
 //      - chunkLenght: The lenght of the rawChunkData array
 //      - chunkName: The name of the chunk
 //      - rawDataChunk: An array of bytes that stores the data in little endian
-//      - chunkCRC: The CRC (Cyclic Redundancy Check) of the chunk
 int getChunk(std::fstream & inputFile, unsigned int & chunkLenght, unsigned int & chunkName, 
                     std::unique_ptr<unsigned char[]> & rawChunkData);
 
 
-int handleIDATChunk(std::unique_ptr<unsigned char[]> & rawData, unsigned int & chunkLenght,
-                        unsigned char filterMethod, unsigned char colortype,
-                        std::unique_ptr<Pixel[]> & outputData);
+// Returns the number of bytes each pixel of the image takes based on the color type
+// or -1 if the color type is not supported
+int getBytesPerPixelPNG(unsigned char colorType);

@@ -44,11 +44,19 @@ int getChunk(std::fstream & inputFile, unsigned int & chunkLenght, unsigned int 
 }
 
 
-/// IDAT Chunk
+int getBytesPerPixelPNG(unsigned char colorType){
+    switch(colorType){
+        case 0: // Grayscale
+            return 1;
+        case 2: // RGB
+            return 3;
+        case 5: // Grayscale with alpha values (transparency)
+            return 2;
+        case 6: // RGB with alpha values (transparency)
+            return 4;
+    }
 
-int handleIDATChunk(std::unique_ptr<unsigned char[]> & rawData, unsigned int & chunkLenght,
-                        unsigned char filterMethod, unsigned char colortype,
-                        std::unique_ptr<Pixel[]> & outputData){
-    
-    return 0;
+    std::cerr << "The color type of the image is not currently supported by the program\n";
+    return -1;
 }
+
