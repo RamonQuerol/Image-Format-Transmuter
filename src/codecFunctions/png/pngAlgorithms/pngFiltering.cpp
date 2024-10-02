@@ -251,7 +251,7 @@ unsigned char calculatePaeth(unsigned int leftByte, unsigned int upByte, unsigne
     int pDiag = abs(p-diagonalByte);
 
     // We find the minimun between pLeft, pUp and pDiag. And return the corresponding byte
-    if(pLeft<=pUp && pUp <= pDiag){
+    if(pLeft<=pUp && pLeft <= pDiag){
         return leftByte;
     }
     
