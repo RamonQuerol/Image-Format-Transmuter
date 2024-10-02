@@ -3,6 +3,7 @@
 #include "pngChunkManagement.hpp"
 #include "fileDataManagementUtils.hpp"
 #include "pngCRC.hpp"
+#include "pixelUtils.hpp"
 
 int getChunk(std::fstream & inputFile, unsigned int & chunkLenght, unsigned int & chunkName, 
                     std::unique_ptr<unsigned char[]> & rawChunkData){
@@ -60,3 +61,25 @@ int getBytesPerPixelPNG(unsigned char colorType){
     return -1;
 }
 
+int obtainGetPixelFunctionPNG(unsigned char colorType, 
+                            std::function<Pixel(std::unique_ptr<unsigned char[]> &, int)> & getPixelFunction){
+    switch(colorType){
+        case 0: // Grayscale
+            getPixelFunction = grayToPixel;
+            break;
+        case 2: // RGB
+            getPixelFunction = rgbToPixel;
+            break;
+        case 5: // Grayscale with alpha values (transparency)
+            getPixelFunction = grayWithAlphaToPixel;
+            break;
+        case 6: // RGB with alpha values (transparency)
+            getPixelFunction = rgbWithAlphaToPixel;
+            break;
+        default:
+            std::cerr << "The color type of the image is not currently supported by the program\n";
+            return -1;
+    }
+
+    return 0;
+}

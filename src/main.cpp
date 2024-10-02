@@ -42,7 +42,7 @@ int main(int argc, char* argv[]){
             break;
         case PNG:
             err = decodePNG(inputFile, decodedImage);
-            return 0;
+            //return 0;
             break;
         case UNDEFINED:
             std::cout << "You must define the input file format. Use --help to know more.\n";

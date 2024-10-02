@@ -6,6 +6,7 @@
 #include "pngCompression.hpp"
 #include "pngFiltering.hpp"
 #include <vector>
+#include <functional>
 
 #define PNG_SIGNATURE 727905341920923785
 
@@ -43,7 +44,8 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
     /// Support variables
     bool iendChunkReached = false;
     int bytesPerPixel; // The number of bytes each pixel takes in the image data
-    
+    std::function<Pixel(std::unique_ptr<unsigned char[]> &, int)> getPixelFunction;
+
 
     //// Signature management ////
 
@@ -141,7 +143,21 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
 
     // outputFile.close();
 
-    imagePixels = std::make_unique<Pixel[]>(height * width);
+
+    imagePixels = std::make_unique<Pixel[]>(height*width);
+
+    if(obtainGetPixelFunctionPNG(colorType, getPixelFunction)){
+        return -1;
+    }
+
+    for(int i = 0; i<height*width;++i){
+        imagePixels[i] = getPixelFunction(rawPixelData, i*bytesPerPixel);
+    }
+
+
+    decodedImage.heigth = height;
+    decodedImage.width = width;
+    decodedImage.imageData = move(imagePixels);
 
     return 0;
 }
