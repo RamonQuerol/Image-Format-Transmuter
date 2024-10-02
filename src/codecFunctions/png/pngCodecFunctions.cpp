@@ -4,6 +4,7 @@
 #include "pngChunkManagement.hpp"
 #include "fileDataManagementUtils.hpp"
 #include "pngCompression.hpp"
+#include "pngFiltering.hpp"
 #include <vector>
 
 #define PNG_SIGNATURE 727905341920923785
@@ -31,9 +32,10 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
     /// Compression and filtering variables
     std::unique_ptr<std::vector<std::unique_ptr<unsigned char[]>>> compressedData; // Is a vector that contains all the data from all the IDAT block in the PNG
     std::unique_ptr<std::vector<unsigned int>> idatLenghts;
-    std::unique_ptr<unsigned char[]> filterdedData; // Data after decompression but before filtering
+    std::unique_ptr<unsigned char[]> filteredData; // Data after decompression but before filtering
     int filteredDataSize;
-
+    
+    std::unique_ptr<unsigned char[]> rawPixelData;
 
     /// Result variables
     std::unique_ptr<Pixel[]> imagePixels;
@@ -99,12 +101,35 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
     }
 
     filteredDataSize = height * (width * bytesPerPixel + 1);
-    filterdedData = std::make_unique<unsigned char[]>(filteredDataSize);
+    filteredData = std::make_unique<unsigned char[]>(filteredDataSize);
     
-    decompressPNG(move(compressedData), move(idatLenghts), filterdedData, filteredDataSize);
+    if(decompressPNG(move(compressedData), move(idatLenghts), filteredData, filteredDataSize)){
+        return -1;
+    }
+
 
     // Decompression check (Dups the data to a file)
     // std::fstream outputFile;
+    // outputFile.open("outputFilt.dat", std::ios::out | std::ios::binary);
+
+    // if (!outputFile){
+    //     std::cout << "The file " << "outputFile" << " could not be opened\n";
+    //     return -4;
+    // }
+
+    //     outputFile.write(reinterpret_cast<char*>(filteredData.get()), filteredDataSize);
+
+
+    // outputFile.close();
+
+    rawPixelData = std::make_unique<unsigned char[]>(height * width * bytesPerPixel);
+
+
+    if(unfilterPNG(move(filteredData), height, width, bytesPerPixel, rawPixelData)){
+        return -1;
+    }
+
+    // Filtering check (Dups the data to a file)
     // outputFile.open("output.dat", std::ios::out | std::ios::binary);
 
     // if (!outputFile){
@@ -112,10 +137,11 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
     //     return -4;
     // }
 
-    // outputFile.write(reinterpret_cast<char*>(filterdedData.get()), filteredDataSize);
+    // outputFile.write(reinterpret_cast<char*>(rawPixelData.get()), height * width * bytesPerPixel);
+
+    // outputFile.close();
 
     imagePixels = std::make_unique<Pixel[]>(height * width);
-
 
     return 0;
 }
