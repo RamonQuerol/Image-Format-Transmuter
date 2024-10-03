@@ -63,15 +63,17 @@ int unfilterPNG(std::unique_ptr<unsigned char[]> filteredData, unsigned int heig
     int inputOffset = 0;
     int outputOffset = 0;
     int err = 0;
-    unsigned char filterMethod;
+    unsigned char filterType;
 
+    /// The for loop will go row by row unfiltering the data with the corresponding method
+    /// and storing it in the outputBuffer
     for(int i = 0; i<height; ++i){
         
-        
-        filterMethod = filteredData[inputOffset];
+        /// In filteredData the first byte of each row defines the filter type
+        filterType = filteredData[inputOffset];
         ++inputOffset;
 
-        switch(filterMethod){
+        switch(filterType){
             case 0:
                 err = reverseNoneFilter(filteredData, width, bytesPerPixel, inputOffset, outputBuffer, outputOffset);
                 break;
@@ -96,6 +98,7 @@ int unfilterPNG(std::unique_ptr<unsigned char[]> filteredData, unsigned int heig
             return -1;
         }
 
+        // Although inputOffset has one more byte per row, we have alredy added that byte before the switch statement
         inputOffset += bytesPerRow;
         outputOffset += bytesPerRow;
     }
@@ -113,6 +116,7 @@ int reverseNoneFilter(std::unique_ptr<unsigned char[]> & filteredData, unsigned 
                     unsigned int bytesPerPixel, int inputOffset,
                     std::unique_ptr<unsigned char[]> & outputBuffer, int outputOffset){
     
+    /// None filter means that we just have to move the data from one buffer to the other
     for(int i = 0; i<width*bytesPerPixel; ++i){
         outputBuffer[outputOffset+i] = filteredData[inputOffset+i];
     }
@@ -126,10 +130,13 @@ int reverseSubFilter(std::unique_ptr<unsigned char[]> & filteredData, unsigned i
                     unsigned int bytesPerPixel, int inputOffset,
                     std::unique_ptr<unsigned char[]> & outputBuffer, int outputOffset){
     
+
+    /// The first pixel does not have a pixel on the left so we equal it to 0
     for(int i = 0; i<bytesPerPixel; ++i){
         outputBuffer[outputOffset+i] = filteredData[inputOffset+i];
     }
 
+    /// To unfilter the subFilter we just have to add the pixel on the left side of our current pixel
     for(int i = bytesPerPixel; i<width*bytesPerPixel; ++i){
         outputBuffer[outputOffset+i] = filteredData[inputOffset+i] + outputBuffer[outputOffset+i-bytesPerPixel];
     }
@@ -143,7 +150,8 @@ int reverseUpFilter(std::unique_ptr<unsigned char[]> & filteredData, unsigned in
                     unsigned int bytesPerPixel, int inputOffset,
                     std::unique_ptr<unsigned char[]> & outputBuffer, int outputOffset){
     
-    // This means that the height is equal to 0 too
+    /// inputOffset == 0 means that we are on the first row and have no upper pixels
+    /// We will handdle the row as if those values where 0
     if(inputOffset == 0){
         return reverseNoneFilter(filteredData, width, bytesPerPixel, inputOffset, outputBuffer, outputOffset);
     }
@@ -163,10 +171,14 @@ int reverseAverageFilter(std::unique_ptr<unsigned char[]> & filteredData, unsign
                     unsigned int bytesPerPixel, int inputOffset,
                     std::unique_ptr<unsigned char[]> & outputBuffer, int outputOffset){
     
-    int upOffset = outputOffset-width*bytesPerPixel; // Offset that points to the byte directly above the current one
     unsigned char average;
-
+    int upOffset = outputOffset-width*bytesPerPixel; // Offset that points to the byte directly above the current one
+    
+    /// inputOffset == 0 means that we are on the first row and have no upper pixels
+    /// We will handdle the row as if those values where 0
     if(inputOffset == 0){
+
+        // First pixel of the row (No pixel on its left)
         for(int i = 0; i<bytesPerPixel; ++i){
             outputBuffer[outputOffset+i] = filteredData[inputOffset+i];
         }
@@ -180,6 +192,7 @@ int reverseAverageFilter(std::unique_ptr<unsigned char[]> & filteredData, unsign
         return 0;
     }
 
+    // First pixel of the row (No pixel on its left) 
     for(int i = 0; i<bytesPerPixel; ++i){
 
         average = calculateAverage(0, outputBuffer[upOffset+i]);
@@ -201,10 +214,15 @@ int reversePaethFilter(std::unique_ptr<unsigned char[]> & filteredData, unsigned
                     unsigned int bytesPerPixel, int inputOffset,
                     std::unique_ptr<unsigned char[]> & outputBuffer, int outputOffset){
     
-    int upOffset = outputOffset-width*bytesPerPixel; // Offset that points to the byte directly above the current one
     unsigned char paeth;
+    int upOffset = outputOffset-width*bytesPerPixel; // Offset that points to the byte directly above the current one
 
+
+    /// inputOffset == 0 means that we are on the first row and have no upper pixels
+    /// We will handdle the row as if those values where 0
     if(inputOffset == 0){
+
+        // First pixel of the row (No pixel on its left) 
         for(int i = 0; i<bytesPerPixel; ++i){
             outputBuffer[outputOffset+i] = filteredData[inputOffset+i];
         }
@@ -218,11 +236,15 @@ int reversePaethFilter(std::unique_ptr<unsigned char[]> & filteredData, unsigned
         return 0;
     }
 
+
+
+    // First pixel of the row (No pixel on its left) 
     for(int i = 0; i<bytesPerPixel; ++i){
 
         paeth = calculatePaeth(0, outputBuffer[upOffset+i], 0);
         outputBuffer[outputOffset+i] = filteredData[inputOffset+i] + paeth;
     }
+
 
     for(int i = bytesPerPixel; i<width*bytesPerPixel; ++i){
 

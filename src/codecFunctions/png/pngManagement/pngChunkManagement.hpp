@@ -20,11 +20,3 @@
 int getChunk(std::fstream & inputFile, unsigned int & chunkLenght, unsigned int & chunkName, 
                     std::unique_ptr<unsigned char[]> & rawChunkData);
 
-
-// Returns the number of bytes each pixel of the image takes based on the color type
-// or -1 if the color type is not supported
-int getBytesPerPixelPNG(unsigned char colorType);
-
-
-int obtainGetPixelFunctionPNG(unsigned char colorType, 
-                            std::function<Pixel(std::unique_ptr<unsigned char[]> &, int)> & getPixelFunction);

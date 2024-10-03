@@ -22,9 +22,7 @@ int decompressPNG(std::unique_ptr<std::vector<std::unique_ptr<unsigned char[]>>>
                   std::unique_ptr<std::vector<unsigned int>> lenghts, std::unique_ptr<unsigned char[]> &decompressedData, 
                   unsigned int decomDataSize){
 
-    int ret = Z_OK;
-    unsigned int dynamicOffset;
-    unsigned int previousLenghts = 0;
+    int ret = Z_OK; /// Result code obtained from zlib's inflate function
     
     z_stream zs;
     memset(&zs, 0, sizeof(zs));
@@ -34,10 +32,12 @@ int decompressPNG(std::unique_ptr<std::vector<std::unique_ptr<unsigned char[]>>>
         return -1;
     }
 
+    /// We set the output buffer, since its always the same we do it outside the for
+    zs.next_out = reinterpret_cast<Bytef *>(decompressedData.get());
     zs.avail_out = decomDataSize;
 
-    zs.next_out = reinterpret_cast<Bytef *>(decompressedData.get());
-
+    /// This will loop through all the IDAT chunks stored in compressedData, decompressiing
+    /// them and storing the result in deocompressedData
     for (int i = 0; i < compressedData->size(); ++i){
 
         zs.next_in = reinterpret_cast<Bytef *>(compressedData->at(i).get());
@@ -52,7 +52,6 @@ int decompressPNG(std::unique_ptr<std::vector<std::unique_ptr<unsigned char[]>>>
             return -1;
         }
 
-        previousLenghts += lenghts->at(i);
     }
 
     inflateEnd(&zs);

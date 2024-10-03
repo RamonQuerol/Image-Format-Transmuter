@@ -13,10 +13,11 @@ add_executable(${PROJECT_NAME}
         src/utils/fileDataManagementUtils.cpp
         src/codecFunctions/bmp/bmpCodecFunctions.cpp
         src/codecFunctions/png/pngCodecFunctions.cpp
-        src/codecFunctions/png/pngChunkManagement.cpp
         src/codecFunctions/png/pngAlgorithms/pngCRC.cpp
         src/codecFunctions/png/pngAlgorithms/pngCompression.cpp
-        src/codecFunctions/png/pngAlgorithms/pngFiltering.cpp)
+        src/codecFunctions/png/pngAlgorithms/pngFiltering.cpp
+        src/codecFunctions/png/pngManagement/pngChunkManagement.cpp
+        src/codecFunctions/png/pngManagement/pngColorManagement.cpp)
 
 # Link the project headers
 target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -24,6 +25,7 @@ target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/s
 target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/codecFunctions/bmp)
 target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/codecFunctions/png)
 target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/codecFunctions/png/pngAlgorithms)
+target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/codecFunctions/png/pngManagement)
 
 # Link the external libraries
 target_link_libraries(${PROJECT_NAME} ZLIB::ZLIB)

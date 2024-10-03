@@ -1,12 +1,17 @@
-#include <iostream>
 
+/// Standard libraries 
+#include <iostream>
+#include <vector>
+#include <functional>
+
+/// Other files
 #include "pngCodecFunctions.hpp"
 #include "pngChunkManagement.hpp"
+#include "pngColorManagement.hpp"
 #include "fileDataManagementUtils.hpp"
 #include "pngCompression.hpp"
 #include "pngFiltering.hpp"
-#include <vector>
-#include <functional>
+
 
 #define PNG_SIGNATURE 727905341920923785
 
@@ -56,6 +61,9 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
         return -1;
     }
 
+
+    //// We get the header chunk (IHDR) and extract all the useful data stored inside it
+
     if (getChunk(inputFile, chunkLenght, chunkName, rawChunkData)){
         return -2;
     }
@@ -80,6 +88,8 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
         return -4;
     }
 
+    //// Then we extract and handdle all the other chunks
+
     compressedData = std::make_unique<std::vector<std::unique_ptr<unsigned char[]>>>();
     idatLenghts = std::make_unique<std::vector<unsigned int>>();
 
@@ -99,8 +109,10 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
             break;
         }
 
-
     }
+
+    //// After managing all the chunks
+    //// We decompress the data extracted from the IDAT chunks
 
     filteredDataSize = height * (width * bytesPerPixel + 1);
     filteredData = std::make_unique<unsigned char[]>(filteredDataSize);
@@ -110,42 +122,21 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
     }
 
 
-    // Decompression check (Dups the data to a file)
-    // std::fstream outputFile;
-    // outputFile.open("outputFilt.dat", std::ios::out | std::ios::binary);
-
-    // if (!outputFile){
-    //     std::cout << "The file " << "outputFile" << " could not be opened\n";
-    //     return -4;
-    // }
-
-    //     outputFile.write(reinterpret_cast<char*>(filteredData.get()), filteredDataSize);
-
-
-    // outputFile.close();
+    //// Once the data is decompressed
+    //// We reverse all the filters that where applied to optimize the compression
 
     rawPixelData = std::make_unique<unsigned char[]>(height * width * bytesPerPixel);
-
 
     if(unfilterPNG(move(filteredData), height, width, bytesPerPixel, rawPixelData)){
         return -1;
     }
 
-    // Filtering check (Dups the data to a file)
-    // outputFile.open("output.dat", std::ios::out | std::ios::binary);
 
-    // if (!outputFile){
-    //     std::cout << "The file " << "outputFile" << " could not be opened\n";
-    //     return -4;
-    // }
-
-    // outputFile.write(reinterpret_cast<char*>(rawPixelData.get()), height * width * bytesPerPixel);
-
-    // outputFile.close();
-
+    //// Now that we have the raw data, we just need to translate that data into Pixels
 
     imagePixels = std::make_unique<Pixel[]>(height*width);
 
+    // We assign the rawData to Pixel translator function to the variable getPixelFunction
     if(obtainGetPixelFunctionPNG(colorType, getPixelFunction)){
         return -1;
     }
@@ -154,6 +145,8 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
         imagePixels[i] = getPixelFunction(rawPixelData, i*bytesPerPixel);
     }
 
+
+    //// Finally we move the data to the Image object
 
     decodedImage.heigth = height;
     decodedImage.width = width;
