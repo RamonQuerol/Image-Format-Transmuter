@@ -8,10 +8,13 @@
 #include "pngCodecFunctions.hpp"
 #include "pngChunkManagement.hpp"
 #include "pngColorManagement.hpp"
+#include "pngPixelManagement.hpp"
 #include "fileDataManagementUtils.hpp"
 #include "pngCompression.hpp"
 #include "pngFiltering.hpp"
 
+
+#include <chrono>
 
 #define PNG_SIGNATURE 727905341920923785
 
@@ -62,6 +65,8 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
     }
 
 
+    auto start = std::chrono::system_clock::now();
+
     //// We get the header chunk (IHDR) and extract all the useful data stored inside it
 
     if (getChunk(inputFile, chunkLenght, chunkName, rawChunkData)){
@@ -88,6 +93,8 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
         return -4;
     }
 
+    auto headerT = std::chrono::system_clock::now();
+
     //// Then we extract and handdle all the other chunks
 
     compressedData = std::make_unique<std::vector<std::unique_ptr<unsigned char[]>>>();
@@ -111,6 +118,8 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
 
     }
 
+    auto chunksT = std::chrono::system_clock::now();
+
     //// After managing all the chunks
     //// We decompress the data extracted from the IDAT chunks
 
@@ -121,6 +130,7 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
         return -1;
     }
 
+    auto compT = std::chrono::system_clock::now();
 
     //// Once the data is decompressed
     //// We reverse all the filters that where applied to optimize the compression
@@ -132,19 +142,32 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
     }
 
 
+    auto filtT = std::chrono::system_clock::now();
+
     //// Now that we have the raw data, we just need to translate that data into Pixels
 
     imagePixels = std::make_unique<Pixel[]>(height*width);
 
-    // We assign the rawData to Pixel translator function to the variable getPixelFunction
-    if(obtainGetPixelFunctionPNG(colorType, getPixelFunction)){
+    if(translateToPixelArray(rawPixelData, colorType, height*width, imagePixels)){
         return -1;
     }
 
-    for(int i = 0; i<height*width;++i){
-        imagePixels[i] = getPixelFunction(rawPixelData, i*bytesPerPixel);
-    }
 
+    auto end = std::chrono::system_clock::now();
+
+
+
+    std::chrono::duration<double> timeHeader = headerT -start;
+    std::chrono::duration<double> timeChunks = chunksT - headerT;
+    std::chrono::duration<double> timeComp =  compT -chunksT;
+    std::chrono::duration<double> timeFilter = filtT -compT;
+    std::chrono::duration<double> timeCopy = end -filtT;
+
+    std::cout << "Header: " << timeHeader.count() << "\n";
+    std::cout << "Chunks: " << timeChunks.count() << "\n";
+    std::cout << "Compression: " << timeComp.count() << "\n";
+    std::cout << "Filtering: " << timeFilter.count() << "\n";
+    std::cout << "Copy: " << timeCopy.count() << "\n";
 
     //// Finally we move the data to the Image object
 
