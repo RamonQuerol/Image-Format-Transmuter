@@ -167,7 +167,7 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
     std::cout << "Chunks: " << timeChunks.count() << "\n";
     std::cout << "Compression: " << timeComp.count() << "\n";
     std::cout << "Filtering: " << timeFilter.count() << "\n";
-    std::cout << "Copy: " << timeCopy.count() << "\n";
+    std::cout << "Copy: " << timeCopy.count() << std::endl;
 
     //// Finally we move the data to the Image object
 
