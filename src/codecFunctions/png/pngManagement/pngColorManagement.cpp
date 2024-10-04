@@ -10,7 +10,7 @@ int getBytesPerPixelPNG(unsigned char colorType){
             return 1;
         case 2: // RGB
             return 3;
-        case 5: // Grayscale with alpha values (transparency)
+        case 4: // Grayscale with alpha values (transparency)
             return 2;
         case 6: // RGB with alpha values (transparency)
             return 4;

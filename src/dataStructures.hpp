@@ -10,7 +10,8 @@ struct Pixel {
     unsigned char green;
     unsigned char blue;
     unsigned char alpha;
-};
+}; // Its important that this struct mantains this order since this files depend on it:
+   //        - pngPixelManagement (memcpy and memset)
 
 // The metadata of the Image
 struct Metadata {
