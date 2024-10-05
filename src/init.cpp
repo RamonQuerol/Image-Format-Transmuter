@@ -21,7 +21,7 @@ int getConfigFromFlags(int argc, char* argv[], InitConfig & config){
         // Flag that sets the input file format
         if(option == "-f" || option == "--from"){
             if(i+1 >= argc){
-                std::cout << "ERROR: When using " << option << " you must specify the input file format right after the flag.\n";
+                std::cerr << "ERROR: When using " << option << " you must specify the input file format right after the flag.\n";
                 return -1;
             }
 
@@ -29,7 +29,7 @@ int getConfigFromFlags(int argc, char* argv[], InitConfig & config){
             
             // We parse the text to the enum data type FileFormat and add it to the config
             if(parseFileFormat(preParsedFileFormat, config.inputFormat)){
-                std::cout << "ERROR: " << preParsedFileFormat << " is either incorrectly written or is not supported as a file format.\n";
+                std::cerr << "ERROR: " << preParsedFileFormat << " is either incorrectly written or is not supported as a file format.\n";
                 return -1;
             }
 
@@ -41,7 +41,7 @@ int getConfigFromFlags(int argc, char* argv[], InitConfig & config){
         // Flag that sets the output file format
         if(option == "-t" || option == "--to"){
             if(i+1 >= argc){
-                std::cout << "ERROR: When using " << option << " you must specify the output file format right after the flag.\n";
+                std::cerr << "ERROR: When using " << option << " you must specify the output file format right after the flag.\n";
                 return -1;
             }
 
@@ -49,7 +49,7 @@ int getConfigFromFlags(int argc, char* argv[], InitConfig & config){
             
             // We parse the text to the enum data type FileFormat and add it to the config
             if(parseFileFormat(preParsedFileFormat, config.outputFormat)){
-                std::cout << "ERROR: " << preParsedFileFormat << " is either incorrectly written or is not supported as a file format.\n";
+                std::cerr << "ERROR: " << preParsedFileFormat << " is either incorrectly written or is not supported as a file format.\n";
                 return -1;
             }
 
@@ -61,7 +61,7 @@ int getConfigFromFlags(int argc, char* argv[], InitConfig & config){
         // Flag that sets the output file name
         if(option == "-o" || option == "--output"){
             if(i+1 >= argc){
-                std::cout << "ERROR: When using " << option << " you must specify the output file name right after the flag.\n";
+                std::cerr << "ERROR: When using " << option << " you must specify the output file name right after the flag.\n";
                 return -1;
             }
 

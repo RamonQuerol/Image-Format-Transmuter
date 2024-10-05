@@ -317,7 +317,7 @@ int decodeBMP(std::fstream & inputFile, Image & decodedImage){
     inputFile.read(reinterpret_cast<char*>(&signature), sizeof(unsigned short));
 
     if(signature != BITMAP_SIGNATURE){ 
-        std::cout << "Not a Bitmap";
+        std::cerr << "Not a Bitmap";
         return -1;
     }
 
@@ -369,7 +369,7 @@ int decodeBMP(std::fstream & inputFile, Image & decodedImage){
             imagePixels = decodeColorImgData(width, height, rawImageData, bitsPerPixel);
             break;
         default:
-            std::cout << "The program has no support to bitMaps with " << bitsPerPixel << " bitsPerPixels.\n";
+            std::cerr << "The program has no support to bitMaps with " << bitsPerPixel << " bitsPerPixels.\n";
             return -1;
     }
 

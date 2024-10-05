@@ -35,7 +35,7 @@ int getChunk(std::fstream & inputFile, unsigned int & chunkLenght, unsigned int 
     chunkCRC = extractBigEndianUInt(chunkCRCByteArray, 0);
 
     if(crc(chunkNameByteArray, rawChunkData, chunkLenght) != chunkCRC){
-        std::cout << "The PNG is corrupted and can not be salfely translated to another format\n";
+        std::cerr << "The PNG is corrupted and can not be salfely translated to another format\n";
         return -1;
     }
 

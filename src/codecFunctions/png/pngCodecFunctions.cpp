@@ -14,8 +14,6 @@
 #include "pngFiltering.hpp"
 
 
-#include <chrono>
-
 #define PNG_SIGNATURE 727905341920923785
 
 int decodePNG(std::fstream &inputFile, Image &decodedImage)
@@ -60,12 +58,11 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
     inputFile.read(reinterpret_cast<char *>(&signature), sizeof(unsigned long long));
 
     if (signature != PNG_SIGNATURE){
-        std::cout << "Not a PNG, the signature does not match\n";
+        std::cerr << "Not a PNG, the signature does not match\n";
         return -1;
     }
 
 
-    auto start = std::chrono::system_clock::now();
 
     //// We get the header chunk (IHDR) and extract all the useful data stored inside it
 
@@ -74,7 +71,7 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
     }
 
     if (chunkName != IHDR){
-        std::cout << "The input png file does not have a header chunk\n";
+        std::cerr << "The input png file does not have a header chunk\n";
         return -3;
     }
 
@@ -93,7 +90,6 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
         return -4;
     }
 
-    auto headerT = std::chrono::system_clock::now();
 
     //// Then we extract and handdle all the other chunks
 
@@ -118,7 +114,6 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
 
     }
 
-    auto chunksT = std::chrono::system_clock::now();
 
     //// After managing all the chunks
     //// We decompress the data extracted from the IDAT chunks
@@ -130,7 +125,6 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
         return -1;
     }
 
-    auto compT = std::chrono::system_clock::now();
 
     //// Once the data is decompressed
     //// We reverse all the filters that where applied to optimize the compression
@@ -142,7 +136,6 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
     }
 
 
-    auto filtT = std::chrono::system_clock::now();
 
     //// Now that we have the raw data, we just need to translate that data into Pixels
 
@@ -153,21 +146,6 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
     }
 
 
-    auto end = std::chrono::system_clock::now();
-
-
-
-    std::chrono::duration<double> timeHeader = headerT -start;
-    std::chrono::duration<double> timeChunks = chunksT - headerT;
-    std::chrono::duration<double> timeComp =  compT -chunksT;
-    std::chrono::duration<double> timeFilter = filtT -compT;
-    std::chrono::duration<double> timeCopy = end -filtT;
-
-    std::cout << "Header: " << timeHeader.count() << "\n";
-    std::cout << "Chunks: " << timeChunks.count() << "\n";
-    std::cout << "Compression: " << timeComp.count() << "\n";
-    std::cout << "Filtering: " << timeFilter.count() << "\n";
-    std::cout << "Copy: " << timeCopy.count() << std::endl;
 
     //// Finally we move the data to the Image object
 
