@@ -141,7 +141,7 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
 
     imagePixels = std::make_unique<Pixel[]>(height*width);
 
-    if(translateToPixelArray(rawPixelData, colorType, height*width, imagePixels)){
+    if(translateToPixelArray(move(rawPixelData), colorType, height*width, imagePixels)){
         return -1;
     }
 
