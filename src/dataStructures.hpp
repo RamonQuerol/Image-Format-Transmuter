@@ -1,5 +1,6 @@
 #include <memory>
 
+#include "configEnums.hpp"
 
 #ifndef DATASTRUCTURES_H
 #define DATASTRUCTURES_H
@@ -15,14 +16,15 @@ struct Pixel {
 
 // The metadata of the Image
 struct Metadata {
-    int gamma;
+    ColorType colorType;
+    int gamma = 0;
 };
 
 // General image data to transfer the image between decoder and ecoder
 struct Image{
     int width;
     int heigth;
-    Metadata *metadata;
+    Metadata metadata;
     // The imageData array has a size of width*heigth pixels
     std::unique_ptr<Pixel[]> imageData; // image pixels ordered from left to right and top to bottom.
 };

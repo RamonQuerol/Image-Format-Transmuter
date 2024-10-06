@@ -2,7 +2,11 @@
 #include <fstream>
 
 #include "init.hpp"
+#include "configEnums.hpp"
 #include "dataStructures.hpp"
+
+#include "enumUtils.hpp"
+
 #include "bmpCodecFunctions.hpp"
 #include "pngCodecFunctions.hpp"
 
@@ -44,7 +48,7 @@ int main(int argc, char* argv[]){
             err = decodePNG(inputFile, decodedImage);
             //return 0;
             break;
-        case UNDEFINED:
+        case UNDEFINED_FORMAT:
             std::cerr << "You must define the input file format. Use --help to know more.\n";
             return -4;
         default:
@@ -53,12 +57,23 @@ int main(int argc, char* argv[]){
             return -5;
     }
     
+    inputFile.close();
+    
     if(err){
         std::cerr << "Something went wrong during the decodification of the image\n";
         return -6;
     }
 
-    inputFile.close();
+    //// Output flags effects
+
+    if(config.outputColorType != UNDEFINED_COLOR){
+        colorTypeCopyTranparency(decodedImage.metadata.colorType, config.outputColorType);
+        decodedImage.metadata.colorType = config.outputColorType;
+    }
+
+    std::cout << colorTypeToString(decodedImage.metadata.colorType) << "\n";
+
+    ///// New image encoding
 
     std::fstream outputFile;
     outputFile.open("output.bmp", std::ios::out | std::ios::binary);
@@ -72,7 +87,7 @@ int main(int argc, char* argv[]){
         case BITMAP:
             err = encodeBMP(outputFile, decodedImage);
             break;
-        case UNDEFINED:
+        case UNDEFINED_FORMAT:
             std::cerr << "You must define the output file format. Use --help to know more.\n";
             return -4;
         default:

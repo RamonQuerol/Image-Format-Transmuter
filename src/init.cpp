@@ -1,16 +1,19 @@
-#include <algorithm>
-
 #include "init.hpp"
+
+#include "enumUtils.hpp"
 
 
 int parseFileFormat(std::string preParsedText,FileFormat & parseResult);
 
 int getConfigFromFlags(int argc, char* argv[], InitConfig & config){
 
+    bool transparent;
+
     // Initialization of config values
     config.is_info_only = false;
-    config.inputFormat = UNDEFINED;
-    config.outputFormat = UNDEFINED;
+    config.inputFormat = UNDEFINED_FORMAT;
+    config.outputFormat = UNDEFINED_FORMAT;
+    config.outputColorType = UNDEFINED_COLOR;
 
     for(int i = 1; i < argc; ++i){
         std::string option = argv[i];
@@ -70,10 +73,30 @@ int getConfigFromFlags(int argc, char* argv[], InitConfig & config){
             continue;
         }
         
-        
+
+        // Flag that sets the output color type, overwriting the one from the image
+        if(option == "-c" || option == "--color"){
+            if(i+1 >= argc){
+                std::cerr << "ERROR: When using " << option << " you must specify the output file format right after the flag.\n";
+                return -1;
+            }
+
+            std::string preParsedFileFormat = argv[i+1];
+            
+            // We parse the text to the enum data type FileFormat and add it to the config
+            if(parseColorType(preParsedFileFormat, config.outputColorType)){
+                std::cerr << "ERROR: " << preParsedFileFormat << " is either incorrectly written or is not supported as a file format.\n";
+                return -1;
+            }
+
+            ++i;
+            continue;
+        }
+
+
         // Flag that prints the current version of the program
         if(option == "--version"){
-            std::cout << "ImageFormatTransmuter version 0.1\n";
+            std::cout << "ImageFormatTransmuter version 0.2\n";
             config.is_info_only = true;
             return 0;
         }
@@ -87,12 +110,17 @@ int getConfigFromFlags(int argc, char* argv[], InitConfig & config){
                     "\n"
                     "Optional flags:\n"
                     "\t-o, --output \tSets the output file name\n"
+                    "\t-c, --color \tSets the output color type (Usually defaulted to the input color type)\n"
                     "\t    --version \tDisplays the installed version of the program and exits\n"
                     "\t-h, --help \tDisplays this text and exits\n"
                     "\n"
                     "Suported file formats:\n"
                     "\tbmp, bitmap\tBoth as output and as input\n"
-                    "\tpng        \tBoth as output and as input\n";
+                    "\tpng        \tBoth as output and as input\n"
+                    "\n"
+                    "Suported color types: \n"
+                    "\tgray\n"
+                    "\tcolor      \t It is RGB or BGR depending on the file format\n";
             
             std::cout << helpText;
             config.is_info_only = true;
@@ -103,42 +131,4 @@ int getConfigFromFlags(int argc, char* argv[], InitConfig & config){
 
 
     return 0;
-}
-
-int parseFileFormat(std::string preParsedText, FileFormat & parseResult){
-
-    std::string lowerCaseText = preParsedText;
-    
-    // We tansform the string into lowerCase
-    std::transform(lowerCaseText.begin(), lowerCaseText.end(), lowerCaseText.begin(), ::tolower);
-
-    if(lowerCaseText == "bmp" || lowerCaseText == "bitmap"){
-        parseResult = BITMAP;
-        return 0;
-    }
-
-    if(lowerCaseText == "png"){
-        parseResult = PNG;
-        return 0;
-    }
-
-    if(lowerCaseText == "jpg"){
-        parseResult = JPG;
-        return 0;
-    }
-
-    return -1;
-}
-
-std::string fileFormatToString(FileFormat format){
-    switch(format){
-        case BITMAP:
-            return "Bitmap";
-        case PNG:
-            return "png";
-        case JPG:
-            return "jpg";
-    }
-
-    return "???";
 }

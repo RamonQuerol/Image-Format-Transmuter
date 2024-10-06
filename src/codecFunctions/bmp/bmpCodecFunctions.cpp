@@ -1,10 +1,12 @@
+#include "bmpCodecFunctions.hpp"
+
 #include <iostream>
 #include <fstream>
-#include "bmpCodecFunctions.hpp"
 #include <memory>
 #include <functional>
-
 #include <math.h>
+
+#include "configEnums.hpp"
 
 ///// CONSTANTS /////
 
@@ -192,7 +194,8 @@ Pixel get32BitsPixel(std::unique_ptr<unsigned char[]> & rawImageData, int offSet
 }
 
 std::unique_ptr<Pixel[]> decodeColorImgData(unsigned int width, unsigned int height, 
-                std::unique_ptr<unsigned char[]> & rawImageData, unsigned int bitsPerPixel){
+                std::unique_ptr<unsigned char[]> & rawImageData, unsigned int bitsPerPixel,
+                ColorType & colorType){
 
     std::unique_ptr<Pixel[]> imagePixels = std::make_unique<Pixel[]>(height*width);
     
@@ -210,9 +213,11 @@ std::unique_ptr<Pixel[]> decodeColorImgData(unsigned int width, unsigned int hei
     switch(bitsPerPixel){
         case 24:
             getPixelFunction = get24BitsPixel;
+            colorType = COLOR;
             break;
         case 32:
             getPixelFunction = get32BitsPixel;
+            colorType = COLOR_WITH_ALPHA;
             break;
         // TODO Although nothing should get through here without a value, i should add a default case just in case
     }
@@ -309,6 +314,7 @@ int decodeBMP(std::fstream & inputFile, Image & decodedImage){
     std::unique_ptr<unsigned char[]> rawImageData; // Stores the bytes of the data block of the bitmap
 
     std::unique_ptr<Pixel[]> imagePixels; // Stores the image data once parsed to Pixels
+    Metadata metadata;
 
     //Image decodedImage;
 
@@ -363,10 +369,11 @@ int decodeBMP(std::fstream & inputFile, Image & decodedImage){
         case 4:
         case 8:
             imagePixels = decodeGrayImageData(width,height, rawImageData, bitsPerPixel);
+            metadata.colorType = GRAY;
             break;
         case 24:
         case 32:
-            imagePixels = decodeColorImgData(width, height, rawImageData, bitsPerPixel);
+            imagePixels = decodeColorImgData(width, height, rawImageData, bitsPerPixel, metadata.colorType);
             break;
         default:
             std::cerr << "The program has no support to bitMaps with " << bitsPerPixel << " bitsPerPixels.\n";
@@ -378,6 +385,8 @@ int decodeBMP(std::fstream & inputFile, Image & decodedImage){
     decodedImage.heigth = height;
     decodedImage.width = width;
     decodedImage.imageData = move(imagePixels);
+
+    decodedImage.metadata = metadata;
 
     return 0;
 }

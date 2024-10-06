@@ -9,6 +9,7 @@ find_package(ZLIB REQUIRED)
 add_executable(${PROJECT_NAME} 
         src/main.cpp
         src/init.cpp
+        src/utils/enumUtils.cpp
         src/utils/fileDataManagementUtils.cpp
         src/codecFunctions/bmp/bmpCodecFunctions.cpp
         src/codecFunctions/png/pngCodecFunctions.cpp

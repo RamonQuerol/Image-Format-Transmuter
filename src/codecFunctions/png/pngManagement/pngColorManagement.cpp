@@ -19,3 +19,19 @@ int getBytesPerPixelPNG(unsigned char colorType){
     std::cerr << "The color type of the image is not currently supported by the program\n";
     return -1;
 }
+
+ColorType getColorTypeEnumPNG(unsigned char charColorType){
+    switch(charColorType){
+        case 0: // Grayscale
+            return GRAY;
+        case 2: // RGB
+            return COLOR;
+        case 4: // Grayscale with alpha values (transparency)
+            return GRAY_WITH_ALPHA;
+        case 6: // RGB with alpha values (transparency)
+            return COLOR_WITH_ALPHA;
+    }
+
+    std::cerr << "The color type of the image is not currently supported by the program\n";
+    return UNDEFINED_COLOR;
+}

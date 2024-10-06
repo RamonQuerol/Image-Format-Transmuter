@@ -46,6 +46,7 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
 
     /// Result variables
     std::unique_ptr<Pixel[]> imagePixels;
+    Metadata metadata;
 
     /// Support variables
     bool iendChunkReached = false;
@@ -152,6 +153,14 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
     decodedImage.heigth = height;
     decodedImage.width = width;
     decodedImage.imageData = move(imagePixels);
+
+    metadata.colorType = getColorTypeEnumPNG(colorType);
+
+    if(metadata.colorType == UNDEFINED_COLOR){
+        return -1;
+    }
+
+    decodedImage.metadata = metadata;
 
     return 0;
 }

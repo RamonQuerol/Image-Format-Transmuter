@@ -1,3 +1,5 @@
+#include "pngPixelManagement.hpp"
+
 #include <memory>
 #include <iostream>
 #include <cstring>
@@ -49,20 +51,21 @@ void rgbWithAlphaToPixel(std::unique_ptr<unsigned char[]> & rawImageData, int nu
 
 ////// Main Functions
 
-int translateToByteArray(std::unique_ptr<Pixel[]> imagePixels, unsigned char colorType,
+// TODO Test the function and all its support functions (can't do it until i have the png encoder)
+int translateToByteArray(std::unique_ptr<Pixel[]> imagePixels, ColorType colorType,
                             int numPixels, std::unique_ptr<unsigned char[]> & rawPixelData){
 
         switch(colorType){
-        case 0: // Grayscale
+        case GRAY: // Grayscale
             pixelToGray(imagePixels, numPixels, rawPixelData);
             break;
-        case 2: // RGB
+        case COLOR: // RGB
             pixelToRgb(imagePixels, numPixels, rawPixelData);
             break;
-        case 4: // Grayscale with alpha values (transparency)
+        case GRAY_WITH_ALPHA: // Grayscale with alpha values (transparency)
             pixelToGrayWithAlpha(imagePixels, numPixels, rawPixelData);
             break;
-        case 6: // RGB with alpha values (transparency)
+        case COLOR_WITH_ALPHA: // RGB with alpha values (transparency)
             pixelToRgbWithAlpha(imagePixels, numPixels, rawPixelData);
             break;
         default:
