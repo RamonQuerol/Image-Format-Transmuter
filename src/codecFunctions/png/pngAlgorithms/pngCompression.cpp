@@ -10,9 +10,59 @@
 #include <sstream>
 
 
+#define MAX_IDAT_CHUNK_SIZE 32768 
+
+
+/// TODO Test the method (Not possible until i have encodePNG)
 int compressPNG(std::unique_ptr<unsigned char[]> decompressedData, unsigned int decomDataSize,
-                std::unique_ptr<std::vector<std::unique_ptr<unsigned char[]>>> compressedData){
+                std::unique_ptr<std::vector<std::unique_ptr<unsigned char[]>>> & compressedData,
+                std::unique_ptr<std::vector<unsigned int>> & compressedDataLenghts){
     
+    
+    int compressionLevel = 5; 
+    int ret = Z_OK; /// Result code obtained from zlib's inflate function
+    std::unique_ptr<unsigned char[]> outBuffer;
+    
+    z_stream zs;
+    memset(&zs, 0, sizeof(zs));
+
+    if (deflateInit(&zs, compressionLevel) != Z_OK){
+        std::cerr << "Error while decompressing the PNG, zlib inflateInit failed\n";
+        return -1;
+    }
+
+    /// We set the output buffer, since its always the same we do it outside the for
+    zs.next_in = reinterpret_cast<Bytef *>(decompressedData.get());
+    zs.avail_in = decomDataSize;
+    zs.avail_out = MAX_IDAT_CHUNK_SIZE;
+    
+    while(ret == Z_OK){
+
+        outBuffer = std::make_unique<unsigned char[]>(MAX_IDAT_CHUNK_SIZE);
+        zs.next_out = reinterpret_cast<Bytef *>(outBuffer.get());
+
+        ret = deflate(&zs, Z_FINISH);
+
+        compressedData->push_back(move(outBuffer));
+
+        if(ret==Z_OK){
+            compressedDataLenghts->push_back(MAX_IDAT_CHUNK_SIZE);
+        }
+    }
+
+    if (ret != Z_STREAM_END){
+        deflateEnd(&zs);
+        std::cerr << "Error while compressing the PNG, zlib could not compress all the data from the file\n";
+        return -1;
+    }
+    
+    if(zs.total_out%MAX_IDAT_CHUNK_SIZE){
+        compressedDataLenghts->push_back(zs.total_out%MAX_IDAT_CHUNK_SIZE);
+    }else{
+        compressedDataLenghts->push_back(MAX_IDAT_CHUNK_SIZE);
+    }
+
+    deflateEnd(&zs);
     
     return 0;
 }
