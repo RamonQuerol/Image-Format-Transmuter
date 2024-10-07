@@ -19,6 +19,11 @@ int main(int argc, char* argv[]){
     }
 
     InitConfig config;
+    Image decodedImage;
+    std::string outputName;
+    std::string formatExtension;
+    int err = -1;
+
 
     if(getConfigFromFlags(argc, argv, config)){
         std::cerr << "The arguments are not correctly written. Use --help to know more.\n";
@@ -37,8 +42,6 @@ int main(int argc, char* argv[]){
         return -3;
     }
 
-    Image decodedImage;
-    int err = -1;
 
     switch(config.inputFormat){
         case BITMAP:
@@ -46,7 +49,6 @@ int main(int argc, char* argv[]){
             break;
         case PNG:
             err = decodePNG(inputFile, decodedImage);
-            //return 0;
             break;
         case UNDEFINED_FORMAT:
             std::cerr << "You must define the input file format. Use --help to know more.\n";
@@ -66,20 +68,34 @@ int main(int argc, char* argv[]){
 
     //// Output flags effects
 
+    // Output color type
     if(config.outputColorType != UNDEFINED_COLOR){
         colorTypeCopyTranparency(decodedImage.metadata.colorType, config.outputColorType);
         decodedImage.metadata.colorType = config.outputColorType;
     }
 
-    std::cout << colorTypeToString(decodedImage.metadata.colorType) << "\n";
+    // Output name
+
+    formatExtension = fileFormatToString(config.outputFormat);
+
+    if(formatExtension==fileFormatToString(UNDEFINED_FORMAT)){
+        std::cerr << "The program does not know the extension for the output format you gave\n";
+    }
+
+    if(config.outputFileName != ""){
+        outputName = config.outputFileName + "." + formatExtension;
+    }else{
+        outputName = "output." + formatExtension;
+    }
+
 
     ///// New image encoding
 
     std::fstream outputFile;
-    outputFile.open("output.bmp", std::ios::out | std::ios::binary);
+    outputFile.open(outputName, std::ios::out | std::ios::binary);
 
     if(!outputFile){
-        std::cerr << "The file "<< "outputFile" << " could not be opened\n";
+        std::cerr << "The file "<< outputName << " could not be opened\n";
         return -4;
     }  
 
@@ -88,20 +104,22 @@ int main(int argc, char* argv[]){
             err = encodeBMP(outputFile, decodedImage);
             break;
         case UNDEFINED_FORMAT:
+            outputFile.close();
             std::cerr << "You must define the output file format. Use --help to know more.\n";
             return -4;
         default:
+            outputFile.close();
             std::cerr << "The current version of the program does not support " + fileFormatToString(config.outputFormat) <<
                     " as an output format.\n";
             return -5;
     }
     
+    outputFile.close();
+
     if(err){
         std::cerr << "Something went wrong during the creation of the new image\n";
         return -6;
     }
-
-    outputFile.close();
 
     return 0;
 }

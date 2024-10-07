@@ -34,7 +34,7 @@ int parseFileFormat(std::string preParsedText, FileFormat & parseResult){
 std::string fileFormatToString(FileFormat format){
     switch(format){
         case BITMAP:
-            return "Bitmap";
+            return "bmp";
         case PNG:
             return "png";
         case JPG:

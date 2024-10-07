@@ -9,6 +9,7 @@
 
 int parseFileFormat(std::string preParsedText, FileFormat & parseResult);
 
+// Return the extension of the format given
 std::string fileFormatToString(FileFormat format);
 
 ///// ColorType

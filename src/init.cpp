@@ -14,6 +14,7 @@ int getConfigFromFlags(int argc, char* argv[], InitConfig & config){
     config.inputFormat = UNDEFINED_FORMAT;
     config.outputFormat = UNDEFINED_FORMAT;
     config.outputColorType = UNDEFINED_COLOR;
+    config.outputFileName = "";
 
     for(int i = 1; i < argc; ++i){
         std::string option = argv[i];
@@ -77,7 +78,7 @@ int getConfigFromFlags(int argc, char* argv[], InitConfig & config){
         // Flag that sets the output color type, overwriting the one from the image
         if(option == "-c" || option == "--color"){
             if(i+1 >= argc){
-                std::cerr << "ERROR: When using " << option << " you must specify the output file format right after the flag.\n";
+                std::cerr << "ERROR: When using " << option << " you must specify the output color type right after the flag.\n";
                 return -1;
             }
 
@@ -85,7 +86,7 @@ int getConfigFromFlags(int argc, char* argv[], InitConfig & config){
             
             // We parse the text to the enum data type FileFormat and add it to the config
             if(parseColorType(preParsedFileFormat, config.outputColorType)){
-                std::cerr << "ERROR: " << preParsedFileFormat << " is either incorrectly written or is not supported as a file format.\n";
+                std::cerr << "ERROR: " << preParsedFileFormat << " is either incorrectly written or is not supported as a color type.\n";
                 return -1;
             }
 
