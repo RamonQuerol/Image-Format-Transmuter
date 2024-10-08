@@ -5,6 +5,10 @@
 #include <thread>
 #include <functional>
 
+#define NUM_FILTERING_THREADS 4
+
+#define NUM_FILTER_TYPES 5
+
 ///// Global variables
 
 int filterError;
@@ -18,6 +22,41 @@ void unfilterThread(std::unique_ptr<unsigned char[]> & filteredData, unsigned in
 ///// Suporting methods prototypes
 
 /// Filtering
+
+/// Sums the values in outputBuffer and returns them
+int sumFilterValues(unsigned int bytesPerRow, std::unique_ptr<unsigned char[]> & outputBuffer);
+
+
+// All apply filter methods do the same
+// They take the data from rawData and apply their respective filter in the current row, then they store 
+// the data in outputBuffer and return the sum of all the sum of all the values on the filtered row
+//
+//   - rawData: Array of bytes that store all the data from the unfiltered image
+//   - rawDataOffset: An offSet that points to the start of the current row in rawData
+//   - bytesPerPixel: Number of bytes each pixel takes
+//   - bytesPerRow: Number of bytes each row takes
+//   - outputBuffer: The byte array where the filtered data is going to be dumped, it has a size of bytesPerRow
+//
+// Returns the sum of all the filtered values of the row or -1 if there has been an error
+
+int applySubFilter(std::unique_ptr<unsigned char[]> & rawData, int rawDataOffset,
+                    unsigned int bytesPerPixel, unsigned int bytesPerRow, 
+                    std::unique_ptr<unsigned char[]> & outputBuffer);
+
+
+int applyUpFilter(std::unique_ptr<unsigned char[]> & rawData, int rawDataOffset,
+                    unsigned int bytesPerPixel, unsigned int bytesPerRow, 
+                    std::unique_ptr<unsigned char[]> & outputBuffer);
+
+
+int applyAverageFilter(std::unique_ptr<unsigned char[]> & rawData, int rawDataOffset,
+                    unsigned int bytesPerPixel, unsigned int bytesPerRow, 
+                    std::unique_ptr<unsigned char[]> & outputBuffer);
+
+
+int applyPaethFilter(std::unique_ptr<unsigned char[]> & rawData, int rawDataOffset,
+                    unsigned int bytesPerPixel, unsigned int bytesPerRow, 
+                    std::unique_ptr<unsigned char[]> & outputBuffer);
 
 
 /// Unfiltering
@@ -54,6 +93,30 @@ unsigned char calculatePaeth(unsigned int leftByte, unsigned int upByte, unsigne
 
 ///// Main methods 
 
+int filterPNG(std::unique_ptr<unsigned char[]> rawData, unsigned int height,
+                unsigned int width, unsigned int bytesPerPixel,
+                std::unique_ptr<unsigned char[]> & filteredData){
+
+    std::unique_ptr<std::thread[]> threads = std::make_unique<std::thread[]>(NUM_FILTERING_THREADS);
+    int bytesPerRow = width*bytesPerPixel;
+
+    filterError = 0;
+
+    // We start the thread on an arbitrary number of threads, 
+    // each thread will filter a 1/NUMBER_FILTERING_THREADS of the rows
+    for(int i = 0; i<NUM_FILTERING_THREADS; ++i){
+        threads[i] = std::thread(filterThread, rawData, height, width, bytesPerPixel, bytesPerRow,
+                                    i, filteredData);
+    }
+
+    /// Wait until all the threads have finished
+    for(int i = 0; i<bytesPerPixel; ++i){
+        threads[i].join();
+    }
+
+    return filterError;
+}
+
 int unfilterPNG(std::unique_ptr<unsigned char[]> filteredData, unsigned int height, 
                 unsigned int width, unsigned int bytesPerPixel, 
                 std::unique_ptr<unsigned char[]> & outputBuffer){
@@ -86,6 +149,71 @@ int unfilterPNG(std::unique_ptr<unsigned char[]> filteredData, unsigned int heig
 
 
 //// Thread functions
+
+void filterThread(std::unique_ptr<unsigned char[]> & rawData, unsigned int height, 
+                    unsigned int width, unsigned int bytesPerPixel, unsigned int bytesPerRow,
+                    int threadNumber, std::unique_ptr<unsigned char[]> & filteredData){
+
+    int selectedFilterType;
+    int rawDataOffset = bytesPerRow*threadNumber;
+    
+    unsigned char bestFilterType;
+    std::unique_ptr<unsigned char []> currentFilter;
+    std::unique_ptr<unsigned char []> bestFilter;
+    int currentSum;
+    int bestSum;
+
+    
+    bestFilter = std::make_unique<unsigned char[]>(bytesPerRow);
+    currentFilter = std::make_unique<unsigned char[]>(bytesPerRow);
+
+    for(int row = threadNumber; row<height; row+=NUM_FILTERING_THREADS, rawDataOffset+=bytesPerRow*NUM_FILTERING_THREADS){
+
+        // None filter
+        memcpy(bestFilter.get(),rawData.get()+rawDataOffset, bytesPerRow); 
+
+        bestSum = sumFilterValues(bytesPerRow, bestFilter);
+        bestFilterType = 0;
+
+        /// This loop will try every posible filter and find the one with the lowest sum
+        for(int filterType = 1; filterType<NUM_FILTER_TYPES; ){
+
+            switch (filterType){
+                case 1: // Sub filter
+                    currentSum = applySubFilter(rawData, rawDataOffset, bytesPerPixel, bytesPerRow, currentFilter);
+                    break;
+                case 2: // Up filter
+                    currentSum = applyUpFilter(rawData, rawDataOffset, bytesPerPixel, bytesPerRow, currentFilter);
+                    break;
+                case 3: // Average filter
+                    currentSum = applyAverageFilter(rawData, rawDataOffset, bytesPerPixel, bytesPerRow, currentFilter);
+                    break;
+                case 4: // Paeth filter
+                    currentSum = applyPaethFilter(rawData, rawDataOffset, bytesPerPixel, bytesPerRow, currentFilter);
+                    break;
+                default:
+                    filterError = -1;
+                    std::cerr << "During the filtering of the output file somehow we reached an unknown filter type\n";
+                    return;
+            }
+
+            if(currentSum<0){
+                filterError = -1;
+                std::cerr << "An error has happened during the filtering of the " << rawDataOffset/bytesPerRow << "th row\n";
+                return;
+            }
+
+            if(currentSum<bestSum){
+                bestFilterType = filterType;
+                memcpy(bestFilter.get(),currentFilter.get(), bytesPerRow); 
+            }
+        }
+
+        filteredData[rawDataOffset+row] = bestFilterType;
+        memcpy(filteredData.get()+rawDataOffset+row+1,bestFilter.get(), bytesPerRow);
+
+    }
+}
 
 void unfilterThread(std::unique_ptr<unsigned char[]> & filteredData, unsigned int height, 
                     unsigned int width, unsigned int bytesPerPixel, unsigned int bytesPerRow,
@@ -137,9 +265,190 @@ void unfilterThread(std::unique_ptr<unsigned char[]> & filteredData, unsigned in
         
 }
 
-//// Suporting methods
+//// Supporting methods
 
-/// Unfiltering suport methods
+/// Filtering support methods
+
+int sumFilterValues(unsigned int bytesPerRow, std::unique_ptr<unsigned char[]> & outputBuffer){
+    
+    int sum = 0;
+
+    for(int i = 0; i<bytesPerRow; ++i){
+        sum += outputBuffer[i];
+    }
+
+    return sum;
+}
+
+
+int applySubFilter(std::unique_ptr<unsigned char[]> & rawData, int rawDataOffset,
+                    unsigned int bytesPerPixel, unsigned int bytesPerRow,
+                    std::unique_ptr<unsigned char[]> & outputBuffer){
+    
+    unsigned char newVal;
+    int sum = 0;
+
+    /// To filter with subFilter we just have to substract the pixel on the left side of our current pixel
+    for(int i = bytesPerRow-1; i>=bytesPerPixel; i -= 1){
+
+        newVal = rawData[rawDataOffset+i] - rawData[rawDataOffset+i-bytesPerPixel];
+
+        outputBuffer[i] = newVal;
+        sum += newVal;
+    }
+
+    for(int i = 0; i<bytesPerPixel; ++i){
+
+        newVal = rawData[rawDataOffset+i];
+
+        outputBuffer[i] = newVal;
+        sum += newVal;
+    }
+
+    return sum;
+
+}
+
+
+int applyUpFilter(std::unique_ptr<unsigned char[]> & rawData, int rawDataOffset,
+                    unsigned int bytesPerPixel, unsigned int bytesPerRow, 
+                    std::unique_ptr<unsigned char[]> & outputBuffer){
+
+    /// outputOffset < bytesPerRow*NUM_FILTERING_THREADS means that we are on the first row and have no upper pixels
+    /// We will handle the row as if those values where 0 and therefore no calculation is needed
+    if(rawDataOffset < bytesPerRow*NUM_FILTERING_THREADS - 1){
+        memcpy(outputBuffer.get(), rawData.get()+rawDataOffset, bytesPerRow);
+        return sumFilterValues(bytesPerRow, outputBuffer);
+    }
+    
+    int sum;
+    int newVal;
+    int upOffset = rawDataOffset-bytesPerRow; // Offset that points to the byte directly above the current one
+    
+    for(int i = 0; i<bytesPerRow; ++i){
+        
+        newVal = rawData[rawDataOffset+i] + rawData[upOffset+i];
+
+        outputBuffer[i] = newVal;
+        sum += newVal;
+    }
+
+    return 0;
+
+}
+
+
+int applyAverageFilter(std::unique_ptr<unsigned char[]> & rawData, int rawDataOffset,
+                    unsigned int bytesPerPixel, unsigned int bytesPerRow, 
+                    std::unique_ptr<unsigned char[]> & outputBuffer){
+    
+    int sum = 0;
+    unsigned char newVal;
+    int average;
+    int upOffset = rawDataOffset-bytesPerRow; // Offset that points to the byte directly above the current one
+    
+    /// outputOffset < bytesPerRow*NUM_FILTERING_THREADS means that we are on the first row and have no upper pixels
+    /// We will handle the row as if those values where 0
+    if(rawDataOffset < bytesPerRow*NUM_FILTERING_THREADS - 1){
+
+        for(int i = bytesPerRow-1; i>=bytesPerPixel; i -= 1){
+
+            average = rawData[rawDataOffset+i-bytesPerPixel]/2;
+            newVal = rawData[rawDataOffset+i] - average;
+
+            outputBuffer[i] = newVal;
+            sum += newVal;
+        }
+
+        for(int i = 0; i<bytesPerPixel; ++i){
+
+            newVal = rawData[rawDataOffset+i];
+
+            outputBuffer[i] = newVal;
+            sum += newVal;
+        }
+
+        return newVal;
+    }
+    
+    for(int i = bytesPerRow-1; i>=bytesPerPixel; i -= 1){
+
+        average = calculateAverage(rawData[rawDataOffset+i-bytesPerPixel], rawData[upOffset+i]);
+        newVal = rawData[rawDataOffset+i] - average;
+
+        outputBuffer[i] = newVal;
+        sum += newVal;
+    }
+
+    for(int i = 0; i<bytesPerPixel; ++i){
+
+        average = rawData[upOffset+i]/2;
+        newVal = rawData[rawDataOffset+i] - average;
+
+        outputBuffer[i] = newVal;
+        sum += newVal;
+    }
+
+    return sum;
+
+}
+
+
+int applyPaethFilter(std::unique_ptr<unsigned char[]> & rawData, int rawDataOffset,
+                    unsigned int bytesPerPixel, unsigned int bytesPerRow, 
+                    std::unique_ptr<unsigned char[]> & outputBuffer){
+    
+    int sum = 0;
+    unsigned char newVal;
+    int paeth;
+    int upOffset = rawDataOffset-bytesPerRow; // Offset that points to the byte directly above the current one
+    
+    /// outputOffset < bytesPerRow*NUM_FILTERING_THREADS means that we are on the first row and have no upper pixels
+    /// We will handle the row as if those values where 0
+    if(rawDataOffset < bytesPerRow*NUM_FILTERING_THREADS - 1){
+
+        for(int i = bytesPerPixel; i<bytesPerRow; ++i){
+
+            paeth = rawData[rawDataOffset+i-bytesPerPixel];
+            newVal = rawData[rawDataOffset+i] - paeth;
+
+            outputBuffer[i] = newVal;
+            sum += newVal;
+        }
+
+        for(int i = 0; i<bytesPerPixel; ++i){
+            newVal = rawData[rawDataOffset+i];
+
+            outputBuffer[i] = newVal;
+            sum += newVal;
+        }
+
+        return newVal;
+    }
+    
+    for(int i = bytesPerPixel; i<bytesPerPixel; ++i){
+
+        paeth = calculatePaeth(rawData[rawDataOffset+i-bytesPerPixel], rawData[upOffset+i], rawData[upOffset+i-bytesPerPixel]);
+        newVal = rawData[rawDataOffset+i] - paeth;
+
+        outputBuffer[i] = newVal;
+        sum += newVal;
+    }
+
+    for(int i = 0; i<bytesPerPixel; ++i){
+
+        paeth = rawData[upOffset+i];
+        newVal = rawData[rawDataOffset+i] - paeth;
+
+        outputBuffer[i] = newVal;
+        sum += newVal;
+    }
+
+    return sum;
+
+}
+
+/// Unfiltering support methods
 
 
 int reverseSubFilter(unsigned int bytesPerPixel, unsigned int bytesPerRow,
@@ -166,8 +475,8 @@ int reverseSubFilter(unsigned int bytesPerPixel, unsigned int bytesPerRow,
 int reverseUpFilter(unsigned int bytesPerPixel, unsigned int bytesPerRow,
                     std::unique_ptr<unsigned char[]> & outputBuffer, int outputOffset){
     
-    /// outputOffset == 0 means that we are on the first row and have no upper pixels
-    /// We will handdle the row as if those values where 0 and therefore no calculation is needed
+    /// outputOffset < bytesPerPixel means that we are on the first row and have no upper pixels
+    /// We will handle the row as if those values where 0 and therefore no calculation is needed
     if(outputOffset < bytesPerPixel){
         return 0;
     }
