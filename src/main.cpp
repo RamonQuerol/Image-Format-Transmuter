@@ -18,12 +18,17 @@ int main(int argc, char* argv[]){
         return -1; 
     }
 
+    ///// Variables
+
     InitConfig config;
     Image decodedImage;
     std::string outputName;
     std::string formatExtension;
     int err = -1;
 
+    ///// Flag analizing
+
+    std::cout << "Analalizing flags\n";
 
     if(getConfigFromFlags(argc, argv, config)){
         std::cerr << "The arguments are not correctly written. Use --help to know more.\n";
@@ -33,6 +38,11 @@ int main(int argc, char* argv[]){
     if(config.is_info_only){
         return 0;
     }
+
+
+    ///// Input image decoding
+
+    std::cout << "Decoding the " << fileFormatToString(config.inputFormat) << " image\n";
 
     std::fstream inputFile;
     inputFile.open(argv[1], std::ios::in | std::ios::binary);
@@ -66,7 +76,7 @@ int main(int argc, char* argv[]){
         return -6;
     }
 
-    //// Output flags effects
+    ///// Output flags effects
 
     // Output color type
     if(config.outputColorType != UNDEFINED_COLOR){
@@ -90,6 +100,8 @@ int main(int argc, char* argv[]){
 
 
     ///// New image encoding
+
+    std::cout << "Creating the new " << fileFormatToString(config.outputFormat) << " image\n"; 
 
     std::fstream outputFile;
     outputFile.open(outputName, std::ios::out | std::ios::binary);
@@ -118,6 +130,8 @@ int main(int argc, char* argv[]){
     }
     
     outputFile.close();
+
+    std::cout << "Image transmutation completed, you can find it with the name " << outputName << "\n";
 
     if(err){
         std::cerr << "Something went wrong during the creation of the new image\n";
