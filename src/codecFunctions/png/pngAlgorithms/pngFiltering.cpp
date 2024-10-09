@@ -15,6 +15,11 @@ int filterError;
 
 ///// Thread Functions prototypes
 
+void filterThread(std::unique_ptr<unsigned char[]> & rawData, unsigned int height, 
+                    unsigned int width, unsigned int bytesPerPixel, unsigned int bytesPerRow,
+                    int threadNumber, std::unique_ptr<unsigned char[]> & filteredData);
+
+
 void unfilterThread(std::unique_ptr<unsigned char[]> & filteredData, unsigned int height, 
                     unsigned int width, unsigned int bytesPerPixel, unsigned int bytesPerRow,
                     int threadOffset, std::unique_ptr<unsigned char[]> & outputBuffer);
@@ -105,8 +110,8 @@ int filterPNG(std::unique_ptr<unsigned char[]> rawData, unsigned int height,
     // We start the thread on an arbitrary number of threads, 
     // each thread will filter a 1/NUMBER_FILTERING_THREADS of the rows
     for(int i = 0; i<NUM_FILTERING_THREADS; ++i){
-        threads[i] = std::thread(filterThread, rawData, height, width, bytesPerPixel, bytesPerRow,
-                                    i, filteredData);
+        threads[i] = std::thread(filterThread, std::ref(rawData), height, width, bytesPerPixel, bytesPerRow,
+                                    i, std::ref(filteredData));
     }
 
     /// Wait until all the threads have finished
