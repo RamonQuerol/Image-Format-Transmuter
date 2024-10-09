@@ -11,6 +11,10 @@
 // or -1 if the color type is not supported
 int getBytesPerPixelPNG(unsigned char colorType);
 
+// Returns the unsigned char equivalent to the enumColorType obtained from the metadata of the struct Image
+// if the charColorType is not support returns UNDEFINED
+unsigned char getCharColorTypePNG(ColorType enumColorType);
+
 // Returns the enum ColorType equivalent to the charColorType obtained from the PNG header
 // if the charColorType is not support returns UNDEFINED
-ColorType getColorTypeEnumPNG(unsigned char charColorType);
+ColorType getEnumColorTypePNG(unsigned char charColorType);

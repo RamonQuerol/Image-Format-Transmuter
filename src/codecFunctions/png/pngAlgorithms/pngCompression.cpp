@@ -34,16 +34,17 @@ int compressPNG(std::unique_ptr<unsigned char[]> decompressedData, unsigned int 
     /// We set the output buffer, since its always the same we do it outside the for
     zs.next_in = reinterpret_cast<Bytef *>(decompressedData.get());
     zs.avail_in = decomDataSize;
-    zs.avail_out = MAX_IDAT_CHUNK_SIZE;
     
     while(ret == Z_OK){
 
         outBuffer = std::make_unique<unsigned char[]>(MAX_IDAT_CHUNK_SIZE);
         zs.next_out = reinterpret_cast<Bytef *>(outBuffer.get());
+        zs.avail_out = MAX_IDAT_CHUNK_SIZE;
 
         ret = deflate(&zs, Z_FINISH);
 
         compressedData->push_back(move(outBuffer));
+
 
         if(ret==Z_OK){
             compressedDataLenghts->push_back(MAX_IDAT_CHUNK_SIZE);

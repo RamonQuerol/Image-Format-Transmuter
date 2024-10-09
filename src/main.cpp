@@ -103,6 +103,9 @@ int main(int argc, char* argv[]){
         case BITMAP:
             err = encodeBMP(outputFile, decodedImage);
             break;
+        case PNG:
+            err = encodePNG(outputFile, decodedImage);
+            break;
         case UNDEFINED_FORMAT:
             outputFile.close();
             std::cerr << "You must define the output file format. Use --help to know more.\n";

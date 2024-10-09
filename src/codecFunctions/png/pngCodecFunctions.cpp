@@ -12,12 +12,125 @@
 #include "fileDataManagementUtils.hpp"
 #include "pngCompression.hpp"
 #include "pngFiltering.hpp"
+#include "pngCRC.hpp"
 
 
 #define PNG_SIGNATURE 727905341920923785
 
-int decodePNG(std::fstream &inputFile, Image &decodedImage)
-{
+int encodePNG(std::fstream & outputFile, Image & image){
+
+    ///// Variables /////
+
+    /// Signature
+    unsigned long long signature = PNG_SIGNATURE;
+
+    /// Header chunk variables
+    unsigned int width = image.width;
+    unsigned int height = image.heigth;
+    unsigned char bitDepth = 8;
+    unsigned char colorType = getCharColorTypePNG(image.metadata.colorType);
+    unsigned char filterMethod = 0;
+    unsigned char compressMethod = 0;
+    unsigned char interlacing = 0;
+
+    /// Chunk management variables
+    unsigned int chunkName;
+    unsigned int chunkLenght;
+    std::unique_ptr<unsigned char[]> chunkData;
+
+    /// Compression and filtering variables
+    std::unique_ptr<unsigned char[]> rawData;
+
+    int filteredDataSize;
+    std::unique_ptr<unsigned char[]> filteredData; // Data after the filtering process has finished
+
+    std::unique_ptr<std::vector<unsigned int>> idatLenghts;
+    std::unique_ptr<std::vector<std::unique_ptr<unsigned char[]>>> compressedData; // Is a vector that contains all the data from all the IDAT block in the PNG
+
+    /// Support variables
+
+    int numPixels = height*width;
+    int bytesPerPixel = getBytesPerPixelPNG(colorType);
+    std::unique_ptr<unsigned char[]> iendByteArray;
+
+
+    ///// Image data management /////
+
+    /// Translation to byte array
+
+    rawData = std::make_unique<unsigned char[]>(numPixels*bytesPerPixel);
+
+    if(translateToByteArray(move(image.imageData), image.metadata.colorType, numPixels, rawData)){
+        return -1;
+    }
+
+    /// Filtering
+
+    filteredDataSize = numPixels*bytesPerPixel + height;
+    filteredData = std::make_unique<unsigned char[]>(filteredDataSize);
+
+    if(filterPNG(move(rawData), height, width, bytesPerPixel, filteredData)){
+        return -1;
+    }
+
+
+    /// Compression
+
+    compressedData = std::make_unique<std::vector<std::unique_ptr<unsigned char[]>>>();
+    idatLenghts = std::make_unique<std::vector<unsigned int>>();
+
+    if(compressPNG(move(filteredData),filteredDataSize, compressedData, idatLenghts)){
+       return -1; 
+    }
+
+    if(compressedData->size() != idatLenghts->size()){
+        std::cerr << "Error during the compression of the output png, the bytes array and lenght vectors sizes do not match\n";
+    }
+
+    ///// Chunk creation and addition to the output file ///// 
+
+    /// Signature
+
+    outputFile.write(reinterpret_cast<char *>(&signature), sizeof(unsigned long long));
+
+    /// Header chunk
+
+    chunkName = IHDR;
+    chunkLenght = 13;
+    chunkData = std::make_unique<unsigned char[]>(chunkLenght);
+
+    addBigEndianUInt(width, chunkData, 0);
+    addBigEndianUInt(height, chunkData, 4);
+    chunkData[8] = bitDepth;
+    chunkData[9] = colorType;
+    chunkData[10] = compressMethod;
+    chunkData[11] = filterMethod;
+    chunkData[12] = interlacing;
+
+    if(addChunk(outputFile, chunkLenght, chunkName, chunkData)){
+        return -1;
+    }
+
+    /// IDAT chunks
+
+    chunkName = IDAT;
+
+    for(int i = 0; i<compressedData->size(); ++i){
+        addChunk(outputFile, idatLenghts->at(i), chunkName, compressedData->at(i));
+    }
+
+    /// IEND chunk
+
+    chunkName = IEND;
+    iendByteArray = std::make_unique<unsigned char[]>(0);
+    chunkLenght = 0;
+
+    addChunk(outputFile, chunkLenght, chunkName, iendByteArray);
+
+    return 0;
+}
+
+int decodePNG(std::fstream &inputFile, Image &decodedImage){
 
     /// Signature
     unsigned long long signature;
@@ -51,7 +164,6 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
     /// Support variables
     bool iendChunkReached = false;
     int bytesPerPixel; // The number of bytes each pixel takes in the image data
-    std::function<Pixel(std::unique_ptr<unsigned char[]> &, int)> getPixelFunction;
 
 
     //// Signature management ////
@@ -154,7 +266,7 @@ int decodePNG(std::fstream &inputFile, Image &decodedImage)
     decodedImage.width = width;
     decodedImage.imageData = move(imagePixels);
 
-    metadata.colorType = getColorTypeEnumPNG(colorType);
+    metadata.colorType = getEnumColorTypePNG(colorType);
 
     if(metadata.colorType == UNDEFINED_COLOR){
         return -1;

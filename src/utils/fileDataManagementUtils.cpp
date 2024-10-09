@@ -2,6 +2,17 @@
 
 #include <iostream>
 
+void addBigEndianUInt(unsigned int intVal, std::unique_ptr<unsigned char[]> & byteArray, int offset){
+
+    unsigned int loopVal = intVal;
+
+    for(int i = 3; i>=0; --i){
+        byteArray[offset + i] = loopVal%256;
+        loopVal /= 256;
+    }
+}
+
+
 // Returns the unsigned int located in the offset from a little endian byte array
 //
 // PRE: The function asumes that it can extract a int size of data from the byte array

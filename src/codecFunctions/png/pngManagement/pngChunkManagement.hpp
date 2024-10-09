@@ -11,7 +11,10 @@
 #define IDAT 1229209940 // Equivalent to 49 44 41 54 in hex or IDAT in ASCII (Big Endian)
 #define IEND 1229278788 // Equivalent to 49 45 4E 44 in hex or IEND in ASCII (Big Endian)
 
-/// Note: The hex values are in little endian
+
+int addChunk(std::fstream & outputFile, unsigned int & chunkLenght, unsigned int & chunkName, 
+                    std::unique_ptr<unsigned char[]> & chunkData);
+
 
 // Retrieves a chunk from the inputFile, and distributes the data into 4 variables:
 //      - chunkLenght: The lenght of the rawChunkData array

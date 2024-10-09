@@ -3,6 +3,8 @@
 #ifndef FILE_DATA_MANAGEMENT_UTILS_H
 #define FILE_DATA_MANAGEMENT_UTILS_H
 
+void addBigEndianUInt(unsigned int intVal, std::unique_ptr<unsigned char[]> & byteArray, int offset);
+
 
 // Returns the unsigned int located in the offset from a big endian byte array
 //

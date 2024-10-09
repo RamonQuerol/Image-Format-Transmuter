@@ -115,7 +115,7 @@ int filterPNG(std::unique_ptr<unsigned char[]> rawData, unsigned int height,
     }
 
     /// Wait until all the threads have finished
-    for(int i = 0; i<bytesPerPixel; ++i){
+    for(int i = 0; i<NUM_FILTERING_THREADS; ++i){
         threads[i].join();
     }
 
@@ -181,7 +181,7 @@ void filterThread(std::unique_ptr<unsigned char[]> & rawData, unsigned int heigh
         bestFilterType = 0;
 
         /// This loop will try every posible filter and find the one with the lowest sum
-        for(int filterType = 1; filterType<NUM_FILTER_TYPES; ){
+        for(int filterType = 1; filterType<NUM_FILTER_TYPES; ++filterType){
 
             switch (filterType){
                 case 1: // Sub filter
@@ -209,6 +209,7 @@ void filterThread(std::unique_ptr<unsigned char[]> & rawData, unsigned int heigh
             }
 
             if(currentSum<bestSum){
+                bestSum = currentSum;
                 bestFilterType = filterType;
                 memcpy(bestFilter.get(),currentFilter.get(), bytesPerRow); 
             }
@@ -216,7 +217,6 @@ void filterThread(std::unique_ptr<unsigned char[]> & rawData, unsigned int heigh
 
         filteredData[rawDataOffset+row] = bestFilterType;
         memcpy(filteredData.get()+rawDataOffset+row+1,bestFilter.get(), bytesPerRow);
-
     }
 }
 
@@ -321,24 +321,24 @@ int applyUpFilter(std::unique_ptr<unsigned char[]> & rawData, int rawDataOffset,
 
     /// outputOffset < bytesPerRow*NUM_FILTERING_THREADS means that we are on the first row and have no upper pixels
     /// We will handle the row as if those values where 0 and therefore no calculation is needed
-    if(rawDataOffset < bytesPerRow*NUM_FILTERING_THREADS - 1){
+    if(rawDataOffset < bytesPerRow-1){
         memcpy(outputBuffer.get(), rawData.get()+rawDataOffset, bytesPerRow);
         return sumFilterValues(bytesPerRow, outputBuffer);
     }
     
     int sum;
-    int newVal;
+    unsigned char newVal;
     int upOffset = rawDataOffset-bytesPerRow; // Offset that points to the byte directly above the current one
     
     for(int i = 0; i<bytesPerRow; ++i){
         
-        newVal = rawData[rawDataOffset+i] + rawData[upOffset+i];
+        newVal = rawData[rawDataOffset+i] - rawData[upOffset+i];
 
         outputBuffer[i] = newVal;
         sum += newVal;
     }
 
-    return 0;
+    return sum;
 
 }
 
@@ -354,7 +354,7 @@ int applyAverageFilter(std::unique_ptr<unsigned char[]> & rawData, int rawDataOf
     
     /// outputOffset < bytesPerRow*NUM_FILTERING_THREADS means that we are on the first row and have no upper pixels
     /// We will handle the row as if those values where 0
-    if(rawDataOffset < bytesPerRow*NUM_FILTERING_THREADS - 1){
+    if(rawDataOffset < bytesPerRow-1){
 
         for(int i = bytesPerRow-1; i>=bytesPerPixel; i -= 1){
 
@@ -373,7 +373,7 @@ int applyAverageFilter(std::unique_ptr<unsigned char[]> & rawData, int rawDataOf
             sum += newVal;
         }
 
-        return newVal;
+        return sum;
     }
     
     for(int i = bytesPerRow-1; i>=bytesPerPixel; i -= 1){
@@ -410,7 +410,7 @@ int applyPaethFilter(std::unique_ptr<unsigned char[]> & rawData, int rawDataOffs
     
     /// outputOffset < bytesPerRow*NUM_FILTERING_THREADS means that we are on the first row and have no upper pixels
     /// We will handle the row as if those values where 0
-    if(rawDataOffset < bytesPerRow*NUM_FILTERING_THREADS - 1){
+    if(rawDataOffset < bytesPerRow-1){
 
         for(int i = bytesPerPixel; i<bytesPerRow; ++i){
 
@@ -428,10 +428,10 @@ int applyPaethFilter(std::unique_ptr<unsigned char[]> & rawData, int rawDataOffs
             sum += newVal;
         }
 
-        return newVal;
+        return sum;
     }
     
-    for(int i = bytesPerPixel; i<bytesPerPixel; ++i){
+    for(int i = bytesPerPixel; i<bytesPerRow; ++i){
 
         paeth = calculatePaeth(rawData[rawDataOffset+i-bytesPerPixel], rawData[upOffset+i], rawData[upOffset+i-bytesPerPixel]);
         newVal = rawData[rawDataOffset+i] - paeth;
@@ -439,6 +439,7 @@ int applyPaethFilter(std::unique_ptr<unsigned char[]> & rawData, int rawDataOffs
         outputBuffer[i] = newVal;
         sum += newVal;
     }
+
 
     for(int i = 0; i<bytesPerPixel; ++i){
 
