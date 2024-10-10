@@ -28,7 +28,7 @@ int main(int argc, char* argv[]){
 
     ///// Flag analizing
 
-    std::cout << "Analalizing flags\n";
+    std::cout << "Analalizing flags" << std::endl;
 
     if(getConfigFromFlags(argc, argv, config)){
         std::cerr << "The arguments are not correctly written. Use --help to know more.\n";
@@ -42,7 +42,7 @@ int main(int argc, char* argv[]){
 
     ///// Input image decoding
 
-    std::cout << "Decoding the " << fileFormatToString(config.inputFormat) << " image\n";
+    std::cout << "Decoding the " << fileFormatToString(config.inputFormat) << " image" << std::endl;
 
     std::fstream inputFile;
     inputFile.open(argv[1], std::ios::in | std::ios::binary);
@@ -101,7 +101,7 @@ int main(int argc, char* argv[]){
 
     ///// New image encoding
 
-    std::cout << "Creating the new " << fileFormatToString(config.outputFormat) << " image\n"; 
+    std::cout << "Creating the new " << fileFormatToString(config.outputFormat) << " image" << std::endl; 
 
     std::fstream outputFile;
     outputFile.open(outputName, std::ios::out | std::ios::binary);
@@ -131,7 +131,7 @@ int main(int argc, char* argv[]){
     
     outputFile.close();
 
-    std::cout << "Image transmutation completed, you can find it with the name " << outputName << "\n";
+    std::cout << "Image transmutation completed, you can find it with the name " << outputName << std::endl;
 
     if(err){
         std::cerr << "Something went wrong during the creation of the new image\n";

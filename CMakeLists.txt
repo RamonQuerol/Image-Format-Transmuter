@@ -12,6 +12,7 @@ add_executable(${PROJECT_NAME}
         src/utils/enumUtils.cpp
         src/utils/fileDataManagementUtils.cpp
         src/codecFunctions/bmp/bmpCodecFunctions.cpp
+        src/codecFunctions/bmp/bmpManagement/bmpPixelManagement.cpp
         src/codecFunctions/png/pngCodecFunctions.cpp
         src/codecFunctions/png/pngAlgorithms/pngCRC.cpp
         src/codecFunctions/png/pngAlgorithms/pngCompression.cpp
@@ -24,6 +25,7 @@ add_executable(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/utils)
 target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/codecFunctions/bmp)
+target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/codecFunctions/bmp/bmpManagement)
 target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/codecFunctions/png)
 target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/codecFunctions/png/pngAlgorithms)
 target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/codecFunctions/png/pngManagement)
