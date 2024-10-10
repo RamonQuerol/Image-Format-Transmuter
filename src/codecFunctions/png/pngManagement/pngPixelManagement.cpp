@@ -51,7 +51,6 @@ void rgbWithAlphaToPixel(std::unique_ptr<unsigned char[]> & rawImageData, int nu
 
 ////// Main Functions
 
-// TODO Test the function and all its support functions (can't do it until i have the png encoder)
 int translateToByteArray(std::unique_ptr<Pixel[]> imagePixels, ColorType colorType,
                             int numPixels, std::unique_ptr<unsigned char[]> & rawPixelData){
 

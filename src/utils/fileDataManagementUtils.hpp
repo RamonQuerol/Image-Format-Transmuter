@@ -3,6 +3,8 @@
 #ifndef FILE_DATA_MANAGEMENT_UTILS_H
 #define FILE_DATA_MANAGEMENT_UTILS_H
 
+// Translates the intVal into a 4 bytes positioned in Big Endian order, then it stores those bytes
+// inside the byteArray.
 void addBigEndianUInt(unsigned int intVal, std::unique_ptr<unsigned char[]> & byteArray, int offset);
 
 

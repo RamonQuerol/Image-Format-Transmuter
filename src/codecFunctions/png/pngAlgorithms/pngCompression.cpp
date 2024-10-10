@@ -13,7 +13,6 @@
 #define MAX_IDAT_CHUNK_SIZE 32768 
 
 
-/// TODO Test the method (Not possible until i have encodePNG)
 int compressPNG(std::unique_ptr<unsigned char[]> decompressedData, unsigned int decomDataSize,
                 std::unique_ptr<std::vector<std::unique_ptr<unsigned char[]>>> & compressedData,
                 std::unique_ptr<std::vector<unsigned int>> & compressedDataLenghts){

@@ -98,6 +98,9 @@ unsigned char calculatePaeth(unsigned int leftByte, unsigned int upByte, unsigne
 
 ///// Main methods 
 
+/// TODO: Currently this method is pretty inefficient, in the future i should probably optimize it
+/// with either OpenGL or BLAS
+
 int filterPNG(std::unique_ptr<unsigned char[]> rawData, unsigned int height,
                 unsigned int width, unsigned int bytesPerPixel,
                 std::unique_ptr<unsigned char[]> & filteredData){
@@ -162,22 +165,22 @@ void filterThread(std::unique_ptr<unsigned char[]> & rawData, unsigned int heigh
     int selectedFilterType;
     int rawDataOffset = bytesPerRow*threadNumber;
     
-    unsigned char bestFilterType;
-    std::unique_ptr<unsigned char []> currentFilter;
-    std::unique_ptr<unsigned char []> bestFilter;
-    int currentSum;
     int bestSum;
+    int currentSum;
+    unsigned char bestFilterType;
+    std::unique_ptr<unsigned char []> filterResult[NUM_FILTER_TYPES];
 
     
-    bestFilter = std::make_unique<unsigned char[]>(bytesPerRow);
-    currentFilter = std::make_unique<unsigned char[]>(bytesPerRow);
+    for(int filterType = 0; filterType<NUM_FILTER_TYPES; ++filterType){
+        filterResult[filterType] = std::make_unique<unsigned char[]>(bytesPerRow);
+    }
 
     for(int row = threadNumber; row<height; row+=NUM_FILTERING_THREADS, rawDataOffset+=bytesPerRow*NUM_FILTERING_THREADS){
 
         // None filter
-        memcpy(bestFilter.get(),rawData.get()+rawDataOffset, bytesPerRow); 
+        memcpy(filterResult[0].get(),rawData.get()+rawDataOffset, bytesPerRow); 
 
-        bestSum = sumFilterValues(bytesPerRow, bestFilter);
+        bestSum = sumFilterValues(bytesPerRow, filterResult[0]);
         bestFilterType = 0;
 
         /// This loop will try every posible filter and find the one with the lowest sum
@@ -185,16 +188,16 @@ void filterThread(std::unique_ptr<unsigned char[]> & rawData, unsigned int heigh
 
             switch (filterType){
                 case 1: // Sub filter
-                    currentSum = applySubFilter(rawData, rawDataOffset, bytesPerPixel, bytesPerRow, currentFilter);
+                    currentSum = applySubFilter(rawData, rawDataOffset, bytesPerPixel, bytesPerRow, filterResult[filterType]);
                     break;
                 case 2: // Up filter
-                    currentSum = applyUpFilter(rawData, rawDataOffset, bytesPerPixel, bytesPerRow, currentFilter);
+                    currentSum = applyUpFilter(rawData, rawDataOffset, bytesPerPixel, bytesPerRow, filterResult[filterType]);
                     break;
                 case 3: // Average filter
-                    currentSum = applyAverageFilter(rawData, rawDataOffset, bytesPerPixel, bytesPerRow, currentFilter);
+                    currentSum = applyAverageFilter(rawData, rawDataOffset, bytesPerPixel, bytesPerRow, filterResult[filterType]);
                     break;
                 case 4: // Paeth filter
-                    currentSum = applyPaethFilter(rawData, rawDataOffset, bytesPerPixel, bytesPerRow, currentFilter);
+                    currentSum = applyPaethFilter(rawData, rawDataOffset, bytesPerPixel, bytesPerRow, filterResult[filterType]);
                     break;
                 default:
                     filterError = -1;
@@ -211,12 +214,11 @@ void filterThread(std::unique_ptr<unsigned char[]> & rawData, unsigned int heigh
             if(currentSum<bestSum){
                 bestSum = currentSum;
                 bestFilterType = filterType;
-                memcpy(bestFilter.get(),currentFilter.get(), bytesPerRow); 
             }
         }
 
         filteredData[rawDataOffset+row] = bestFilterType;
-        memcpy(filteredData.get()+rawDataOffset+row+1,bestFilter.get(), bytesPerRow);
+        memcpy(filteredData.get()+rawDataOffset+row+1,filterResult[bestFilterType].get(), bytesPerRow);
     }
 }
 

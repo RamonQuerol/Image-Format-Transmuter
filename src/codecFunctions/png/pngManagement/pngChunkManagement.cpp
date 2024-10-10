@@ -4,7 +4,7 @@
 #include "fileDataManagementUtils.hpp"
 #include "pngCRC.hpp"
 
-int addChunk(std::fstream & outputFile, unsigned int & chunkLenght, unsigned int & chunkName, 
+int addChunk(std::fstream & outputFile, unsigned int chunkLenght, unsigned int chunkName, 
                     std::unique_ptr<unsigned char[]> & chunkData){
 
     std::unique_ptr<unsigned char[]> chunkLenghtByteArray = std::make_unique<unsigned char[]>(4);
