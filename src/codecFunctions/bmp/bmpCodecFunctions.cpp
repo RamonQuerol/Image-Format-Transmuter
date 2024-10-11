@@ -8,6 +8,9 @@
 
 #include "configEnums.hpp"
 #include "bmpPixelManagement.hpp"
+#include "bmpColorManagement.hpp"
+
+#include <chrono>
 
 ///// CONSTANTS /////
 
@@ -31,7 +34,7 @@ int encodeBMP(std::fstream & outputFile, Image & image){
 
     //// Suport variables
 
-    int bytesPerPixel = 3; //The 3 here represents the bytes per pixel of a 24 BMP image 
+    int bytesPerPixel = bmpColorTypeToBytesPerPixel(image.metadata.colorType); 
     int fillerBytes = (4 - (image.width*bytesPerPixel)%4)%4; 
     int rowSize = image.width*bytesPerPixel+fillerBytes;
 
@@ -50,7 +53,7 @@ int encodeBMP(std::fstream & outputFile, Image & image){
     unsigned int width = image.width;
     unsigned int height = image.heigth;
     unsigned short colorPlane = 1; // TODO Learn about color planes
-    unsigned short bitsPerPixel = 24; // Until i add more options this function suports only 24 pixels
+    unsigned short bitsPerPixel = bytesPerPixel*8;
     unsigned int compressionMethod = 0; // TODO Learn about Bitmap compression methods
     unsigned int imageDataSize = height*rowSize;
 
@@ -149,13 +152,27 @@ int encodeBMP(std::fstream & outputFile, Image & image){
 
     rawImageData = std::make_unique<unsigned char[]>(imageDataSize);
 
-    for(int i = 0; i<height; ++i){
+    auto start = std::chrono::system_clock::now();
 
-        for(int j = 0; j<width; ++j){
-            add24bitPixelToRawImageData(image.imageData[(height-i-1)*width + j], rawImageData, i*rowSize + j*bytesPerPixel);     
+    if(bytesPerPixel == 1){
+        for(int i = 0; i<height; ++i){
+            pixelRowToGrayBMP(image.imageData, width, (height-i-1)*width, i*rowSize, rawImageData);
         }
-
+    }else{
+        for(int i = 0; i<height; ++i){
+            pixelRowToColorBMP(image.imageData, width, bytesPerPixel, (height-i-1)*width, i*rowSize, rawImageData);
+        }
     }
+
+    
+
+    //pixelRowTo24BitBMP(image.imageData, height, width, rowSize, rawImageData);
+
+    auto end = std::chrono::system_clock::now();
+
+    std::chrono::duration<double> elapsed_seconds = end - start;
+
+    std::cout << elapsed_seconds.count() << "\n";
 
     outputFile.write(reinterpret_cast<char*>(rawImageData.get()), imageDataSize);
 

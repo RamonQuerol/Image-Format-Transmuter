@@ -2,17 +2,40 @@
 
 #include <functional>
 #include <math.h>
+#include <cstring>
 
 
 
 ///// ENCODING /////
 
-void add24bitPixelToRawImageData(Pixel pixel, std::unique_ptr<unsigned char[]> & rawImageData, int offSet){
-    rawImageData[offSet] = pixel.blue;
-    rawImageData[offSet+1] = pixel.green;
-    rawImageData[offSet+2] = pixel.red;
+void pixelRowToGrayBMP(std::unique_ptr<Pixel[]> & imagePixels, unsigned int width,
+                            unsigned int imgPixelsOffset,unsigned int rawDataOffset, 
+                            std::unique_ptr<unsigned char[]> & rawImageData){
+
+    for(int i = 0; i<width; ++i){
+        rawImageData[rawDataOffset+i] = imagePixels[imgPixelsOffset+i].red;
+    }
 }
 
+
+void pixelRowToColorBMP(std::unique_ptr<Pixel[]> & imagePixels, unsigned int width, unsigned int bytesPerPixel,
+                            unsigned int imagePixelsInitOffset,unsigned int rawDataOffset, 
+                            std::unique_ptr<unsigned char[]> & rawImageData){
+    int rawDataPos = rawDataOffset;
+
+
+    Pixel *imagePixelsPointer = imagePixels.get();
+    unsigned char *rawDataPointer = rawImageData.get();
+
+    for(int j = 0; j<width; ++j, rawDataPos += bytesPerPixel){
+
+        std::memcpy(rawDataPointer + rawDataPos, imagePixelsPointer + imagePixelsInitOffset +j, bytesPerPixel);
+
+        // We have to swap because BMP is in BGR and Pixel format in RGB
+        std::swap(rawDataPointer[rawDataPos], rawDataPointer[rawDataPos+2]); 
+
+    }
+}
 
 ///// DECODING /////
 

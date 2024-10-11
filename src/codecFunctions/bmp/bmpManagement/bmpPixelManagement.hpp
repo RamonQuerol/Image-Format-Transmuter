@@ -5,7 +5,16 @@
 
 ///// ENCODING /////
 
-void add24bitPixelToRawImageData(Pixel pixel, std::unique_ptr<unsigned char[]> & rawImageData, int offSet);
+
+void pixelRowToGrayBMP(std::unique_ptr<Pixel[]> & imagePixels, unsigned int width,
+                            unsigned int imgPixelsOffset,unsigned int rawDataOffset, 
+                            std::unique_ptr<unsigned char[]> & rawImageData);
+
+
+
+void pixelRowToColorBMP(std::unique_ptr<Pixel[]> & imagePixels, unsigned int width, unsigned int bytesPerPixel,
+                            unsigned int imagePixelsInitOffset,unsigned int rawDataOffset, 
+                            std::unique_ptr<unsigned char[]> & rawImageData);
 
 
 ///// DECODING /////
