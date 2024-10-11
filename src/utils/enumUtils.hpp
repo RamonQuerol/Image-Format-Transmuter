@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "configEnums.hpp"
+#include "dataStructures.hpp"
 
 #ifndef ENUM_UTILS_H
 #define ENUM_UTILS_H
@@ -21,6 +22,10 @@ int parseColorType(std::string preParsedText, ColorType & parseResult);
 /// @param toColorType Color type the transparency is copied to
 void colorTypeCopyTranparency(ColorType fromColorType, ColorType & toColorType);
 
+/// @brief Transforms the image pixels to their gray values using the luminosity method
+/// @param imagePixels Array of Pixels that contain RGB values
+/// @param numPixels Size of the array
+void colorTypeColorToGray(std::unique_ptr<Pixel []> & imagePixels, int numPixels);
 
 std::string colorTypeToString(ColorType colorType);
 

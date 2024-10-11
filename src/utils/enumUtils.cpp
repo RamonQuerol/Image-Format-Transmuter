@@ -1,6 +1,8 @@
 #include "enumUtils.hpp"
 
 #include <algorithm>
+#include <memory>
+#include <cstring>
 
 
 ///// FileFormat
@@ -65,6 +67,23 @@ int parseColorType(std::string preParsedText, ColorType & parseResult){
     }
 
     return -1;
+}
+
+void colorTypeColorToGray(std::unique_ptr<Pixel []> & imagePixels, int numPixels){
+
+    Pixel pixel;
+    unsigned char grayVal;
+
+    Pixel *imagePixelsPointer = imagePixels.get();
+
+    for(int i = 0; i<numPixels; ++i){
+        pixel = imagePixels[i];
+        grayVal = 0.2126 * pixel.red + 0.7152 * pixel.green + 0.0722 * pixel.blue;
+
+        memset(imagePixelsPointer + i, grayVal, 3);
+
+    }
+
 }
 
 void colorTypeCopyTranparency(ColorType fromColorType, ColorType & toColorType){

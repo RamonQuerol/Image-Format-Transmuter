@@ -80,7 +80,16 @@ int main(int argc, char* argv[]){
 
     // Output color type
     if(config.outputColorType != UNDEFINED_COLOR){
+        std::cout << "Adapting the image to the new color and trsparency" << std::endl;
+
         colorTypeCopyTranparency(decodedImage.metadata.colorType, config.outputColorType);
+
+        if(config.outputColorType != decodedImage.metadata.colorType
+            && (config.outputColorType == GRAY || config.outputColorType == GRAY_WITH_ALPHA)){
+
+            colorTypeColorToGray(decodedImage.imageData, decodedImage.heigth*decodedImage.width);
+        }
+        
         decodedImage.metadata.colorType = config.outputColorType;
     }
 

@@ -65,7 +65,7 @@ int encodeBMP(std::fstream & outputFile, Image & image){
     // Color masks for 24bits BGR bitmap
     unsigned int redMask = COLOR_MASK_THIRD_BYTE;
     unsigned int greenMask = COLOR_MASK_SECOND_BYTE;
-    unsigned int blueMask = COLOR_MASK_THIRD_BYTE;
+    unsigned int blueMask = COLOR_MASK_FIRST_BYTE;
     unsigned int alphaMask = 0;
 
     unsigned int csType = BGRs_INT_VALUE;
@@ -99,6 +99,15 @@ int encodeBMP(std::fstream & outputFile, Image & image){
     unsigned int infoHeaderReservedBytes = 0;
 
     //// If there is extra logic for the initialization of the variables it should go here
+
+
+    /// Gray images needs a color table to work, so we modify the header values to allow said table
+    if(bytesPerPixel == 1){
+        colorsUsed = 256;
+        numberOfImportantColors = 256;
+        totalLenght += GRAY_8BIT_COLOR_TABLE_SIZE;
+        dataOffset += GRAY_8BIT_COLOR_TABLE_SIZE;
+    }
 
     //// Add the header in the file
 
@@ -152,27 +161,18 @@ int encodeBMP(std::fstream & outputFile, Image & image){
 
     rawImageData = std::make_unique<unsigned char[]>(imageDataSize);
 
-    auto start = std::chrono::system_clock::now();
 
-    if(bytesPerPixel == 1){
+    if(bytesPerPixel == 1){ /// GRAY
+        bmpAdd8BitsColorTable(outputFile);
         for(int i = 0; i<height; ++i){
             pixelRowToGrayBMP(image.imageData, width, (height-i-1)*width, i*rowSize, rawImageData);
         }
-    }else{
+    }else{ /// COLOR
         for(int i = 0; i<height; ++i){
             pixelRowToColorBMP(image.imageData, width, bytesPerPixel, (height-i-1)*width, i*rowSize, rawImageData);
         }
     }
 
-    
-
-    //pixelRowTo24BitBMP(image.imageData, height, width, rowSize, rawImageData);
-
-    auto end = std::chrono::system_clock::now();
-
-    std::chrono::duration<double> elapsed_seconds = end - start;
-
-    std::cout << elapsed_seconds.count() << "\n";
 
     outputFile.write(reinterpret_cast<char*>(rawImageData.get()), imageDataSize);
 

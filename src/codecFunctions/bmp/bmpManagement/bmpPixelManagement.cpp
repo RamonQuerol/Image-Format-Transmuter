@@ -4,7 +4,7 @@
 #include <math.h>
 #include <cstring>
 
-
+#include <iostream>
 
 ///// ENCODING /////
 
