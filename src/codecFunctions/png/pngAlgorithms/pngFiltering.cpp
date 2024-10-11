@@ -1,5 +1,6 @@
-
 #include "pngFiltering.hpp"
+
+/// Standard libraries 
 #include <iostream>
 #include <cstring>
 #include <thread>

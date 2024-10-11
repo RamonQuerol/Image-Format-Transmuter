@@ -1,5 +1,6 @@
 #include "bmpColorManagement.hpp"
 
+/// Standard libraries 
 #include <iostream>
 #include <memory>
 #include <cstring>

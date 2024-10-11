@@ -1,4 +1,4 @@
-// General libraries
+/// Standard libraries 
 #include <fstream>
 
 // Other files

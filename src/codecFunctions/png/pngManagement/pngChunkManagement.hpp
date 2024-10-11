@@ -1,8 +1,9 @@
-#include <memory>
-#include <iostream>
-#include <fstream>
-#include <functional>
 
+/// Standard libraries 
+#include <memory>
+#include <fstream>
+
+/// Other files
 #include "dataStructures.hpp"
 
 /// Chunk names as constants

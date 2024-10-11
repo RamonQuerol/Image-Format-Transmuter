@@ -1,10 +1,10 @@
 #include "pngPixelManagement.hpp"
 
+/// Standard libraries 
 #include <memory>
 #include <iostream>
 #include <cstring>
 
-#include "dataStructures.hpp"
 
 
 ///// Prototype functions 

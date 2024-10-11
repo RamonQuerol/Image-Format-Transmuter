@@ -1,5 +1,8 @@
+
+/// Standard libraries 
 #include <iostream>
 
+/// Other files
 #include "configEnums.hpp"
 #include "dataStructures.hpp"
 

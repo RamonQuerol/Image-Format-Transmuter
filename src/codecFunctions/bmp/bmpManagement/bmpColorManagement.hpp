@@ -1,6 +1,8 @@
 
+/// Standard libraries 
 #include <fstream>
 
+/// Other files
 #include "dataStructures.hpp"
 
 #define GRAY_8BIT_COLOR_TABLE_SIZE 1024

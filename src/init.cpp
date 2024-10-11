@@ -1,9 +1,8 @@
 #include "init.hpp"
 
+/// Other files
 #include "enumUtils.hpp"
 
-
-int parseFileFormat(std::string preParsedText,FileFormat & parseResult);
 
 int getConfigFromFlags(int argc, char* argv[], InitConfig & config){
 
@@ -97,7 +96,7 @@ int getConfigFromFlags(int argc, char* argv[], InitConfig & config){
 
         // Flag that prints the current version of the program
         if(option == "--version"){
-            std::cout << "ImageFormatTransmuter version 0.2\n";
+            std::cout << "ImageFormatTransmuter version 0.3\n";
             config.is_info_only = true;
             return 0;
         }

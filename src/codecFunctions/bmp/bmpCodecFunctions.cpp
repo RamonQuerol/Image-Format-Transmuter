@@ -1,16 +1,14 @@
 #include "bmpCodecFunctions.hpp"
 
+/// Standard libraries 
 #include <iostream>
 #include <fstream>
 #include <memory>
-#include <functional>
-#include <math.h>
 
+/// Other files
 #include "configEnums.hpp"
 #include "bmpPixelManagement.hpp"
 #include "bmpColorManagement.hpp"
-
-#include <chrono>
 
 ///// CONSTANTS /////
 

@@ -1,13 +1,11 @@
-
 #include "pngCompression.hpp"
 
+/// Standar libraries
 #include <iostream>
-#include <zlib.h>
+#include <cstring>
 
-#include <string.h>
-#include <stdexcept>
-#include <iomanip>
-#include <sstream>
+/// Third party libraries
+#include <zlib.h>
 
 
 #define MAX_IDAT_CHUNK_SIZE 32768 

@@ -1,10 +1,10 @@
 #include "bmpPixelManagement.hpp"
 
+/// Standard libraries 
 #include <functional>
 #include <math.h>
 #include <cstring>
 
-#include <iostream>
 
 ///// ENCODING /////
 

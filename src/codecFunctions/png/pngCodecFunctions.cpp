@@ -12,7 +12,6 @@
 #include "fileDataManagementUtils.hpp"
 #include "pngCompression.hpp"
 #include "pngFiltering.hpp"
-#include "pngCRC.hpp"
 
 
 #define PNG_SIGNATURE 727905341920923785

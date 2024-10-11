@@ -1,5 +1,8 @@
+
+/// Standard libraries 
 #include <memory>
 
+/// Other files
 #include "configEnums.hpp"
 
 #ifndef DATASTRUCTURES_H

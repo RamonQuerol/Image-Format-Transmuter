@@ -1,5 +1,8 @@
 
+/// Standard libraries
+#include <iostream>
 
+/// Other files
 #include "pngChunkManagement.hpp"
 #include "fileDataManagementUtils.hpp"
 #include "pngCRC.hpp"

@@ -1,6 +1,9 @@
+
+/// Standard libraries 
 #include <iostream>
 #include <fstream>
 
+/// Other files
 #include "init.hpp"
 #include "configEnums.hpp"
 #include "dataStructures.hpp"
@@ -80,7 +83,7 @@ int main(int argc, char* argv[]){
 
     // Output color type
     if(config.outputColorType != UNDEFINED_COLOR){
-        std::cout << "Adapting the image to the new color and trsparency" << std::endl;
+        std::cout << "Adapting the image to the new color and transparency" << std::endl;
 
         colorTypeCopyTranparency(decodedImage.metadata.colorType, config.outputColorType);
 
