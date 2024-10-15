@@ -25,7 +25,7 @@ int parseFileFormat(std::string preParsedText, FileFormat & parseResult){
         return 0;
     }
 
-    if(lowerCaseText == "jpg"){
+    if(lowerCaseText == "jpg" || lowerCaseText == "jpeg"){
         parseResult = JPG;
         return 0;
     }

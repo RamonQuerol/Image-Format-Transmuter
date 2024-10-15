@@ -27,3 +27,31 @@ unsigned int extractBigEndianUInt(std::unique_ptr<unsigned char[]> & byteArray, 
 
     return result;
 }
+
+
+unsigned short extractBigEndianUshort(std::unique_ptr<unsigned char[]> & byteArray, int offset){
+    unsigned short result = 0;
+
+    result += byteArray[offset+1];
+    result += byteArray[offset]*256;
+
+    return result;
+}
+
+
+unsigned int getFileSize(std::fstream & file){
+    unsigned int tellgBeg;
+    unsigned int tellgEnd;
+
+    file.seekg(0, std::ios::beg);
+    tellgBeg = file.tellg();
+
+    file.seekg(0, std::ios::end);
+    tellgEnd = file.tellg();
+
+    /// Restore the file to the begging
+    file.clear();
+    file.seekg(0, std::ios::beg);
+
+    return tellgEnd - tellgBeg;
+}
