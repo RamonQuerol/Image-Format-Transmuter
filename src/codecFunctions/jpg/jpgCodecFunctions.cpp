@@ -9,6 +9,7 @@
 #include "fileDataManagementUtils.hpp"
 #include "jpgComponentManagement.hpp"
 #include "jpgSegmentManagement.hpp"
+#include "jpgHuffmanTree.hpp"
 
 
 #define START_SEGEMENT_MARKER 55551 /// FF D8
@@ -53,9 +54,12 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     std::unique_ptr<Component []> components;
     int numComponents = 0;
 
+    /// Huffman trees
+    std::vector<JpgHuffmanTree> huffmanTrees; 
+    unsigned int numHuffTrees = 0;
 
     /// Suport variables
-    
+    int err = 0;
 
     //// Reading the file
 
@@ -101,6 +105,10 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
                 case PROGRESSIVE_SEGEMENT_MARKER:
                     std::cerr << "The program does not currently support progressive DCT-based jpeg\n";
                     return -1;
+                case HUFFMAN_SEGMENT_MARKER:
+                    huffmanTrees.push_back(JpgHuffmanTree(fileData, fileDataOffset, segmentLenght, err));
+                    ++numHuffTrees;
+                    break;
                 case SCAN_SEGMENT_MARKER:
 
                     for(int i = 0; i<numComponents; ++i){
@@ -123,6 +131,9 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
                     break;
             }
 
+            if(err){
+                return -1;
+            }
 
             fileDataOffset += segmentLenght-2;
         }
