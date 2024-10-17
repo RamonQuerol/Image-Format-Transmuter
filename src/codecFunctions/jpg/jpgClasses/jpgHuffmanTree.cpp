@@ -3,18 +3,20 @@
 #include <iostream>
 
 
+
+
 JpgHuffmanTree::JpgHuffmanTree(std::unique_ptr<unsigned char[]> & fileData, unsigned int offSet, 
                                unsigned short segmentLenght, int & err){
 
     unsigned char charsWithThisLenght;
     int numCharAdded = 0;
-    std::vector<std::weak_ptr<HuffmanLeaf>> availableLeafs;
-    std::shared_ptr<HuffmanLeaf> currentLeaf;
-    std::shared_ptr<HuffmanLeaf> newLeaf;
+    std::vector<std::weak_ptr<HuffmanNode>> availableLeafs;
+    std::shared_ptr<HuffmanNode> currentLeaf;
+    std::shared_ptr<HuffmanNode> newLeaf;
 
 
     id = fileData[offSet];
-    rootLeaf = std::make_shared<HuffmanLeaf>();
+    rootLeaf = std::make_shared<HuffmanNode>();
     rootLeaf->leafDepth = 0;
 
     leafList.push_back(rootLeaf);
@@ -32,7 +34,7 @@ JpgHuffmanTree::JpgHuffmanTree(std::unique_ptr<unsigned char[]> & fileData, unsi
             currentLeaf = availableLeafs[availableLeafs.size()-1].lock();
 
             while(currentLeaf->leafDepth != depth){
-                newLeaf = std::make_shared<HuffmanLeaf>();
+                newLeaf = std::make_shared<HuffmanNode>();
                 newLeaf->leafDepth = currentLeaf->leafDepth + 1;
                 
                 leafList.push_back(newLeaf);
