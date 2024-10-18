@@ -58,6 +58,9 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     std::vector<JpgHuffmanTree> huffmanTrees; 
     unsigned int numHuffTrees = 0;
 
+    unsigned int huffmanByteOffset = 0;
+    unsigned int huffmanBitOffset = 7;
+
     /// Suport variables
     int err = 0;
 

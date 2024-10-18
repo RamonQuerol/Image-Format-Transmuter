@@ -1,7 +1,7 @@
 #include "jpgHuffmanTree.hpp"
 
 #include <iostream>
-
+#include <math.h>
 
 
 
@@ -10,17 +10,17 @@ JpgHuffmanTree::JpgHuffmanTree(std::unique_ptr<unsigned char[]> & fileData, unsi
 
     unsigned char charsWithThisLenght;
     int numCharAdded = 0;
-    std::vector<std::weak_ptr<HuffmanNode>> availableLeafs;
-    std::shared_ptr<HuffmanNode> currentLeaf;
-    std::shared_ptr<HuffmanNode> newLeaf;
+    std::vector<std::weak_ptr<HuffmanNode>> availableNodes;
+    std::shared_ptr<HuffmanNode> currentNode;
+    std::shared_ptr<HuffmanNode> newNode;
 
 
     id = fileData[offSet];
-    rootLeaf = std::make_shared<HuffmanNode>();
-    rootLeaf->leafDepth = 0;
+    rootNode = std::make_shared<HuffmanNode>();
+    rootNode->leafDepth = 0;
 
-    leafList.push_back(rootLeaf);
-    availableLeafs.push_back(rootLeaf);
+    nodeList.push_back(rootNode);
+    availableNodes.push_back(rootNode);
 
     /// This loop goes through the first 16 bytes after the table ID
     /// where it is stored the number of character in each level of the tree
@@ -31,32 +31,32 @@ JpgHuffmanTree::JpgHuffmanTree(std::unique_ptr<unsigned char[]> & fileData, unsi
         /// Once we have the number of characters in this level we add their leaves to the tree
         for(int j = 0; j<charsWithThisLenght; ++j){
             
-            currentLeaf = availableLeafs[availableLeafs.size()-1].lock();
+            currentNode = availableNodes[availableNodes.size()-1].lock();
 
-            while(currentLeaf->leafDepth != depth){
-                newLeaf = std::make_shared<HuffmanNode>();
-                newLeaf->leafDepth = currentLeaf->leafDepth + 1;
+            while(currentNode->leafDepth != depth){
+                newNode = std::make_shared<HuffmanNode>();
+                newNode->leafDepth = currentNode->leafDepth + 1;
                 
-                leafList.push_back(newLeaf);
+                nodeList.push_back(newNode);
 
-                if(currentLeaf->leftLeaf.expired()){
+                if(currentNode->leftNode.expired()){
 
-                    currentLeaf->leftLeaf = newLeaf;
+                    currentNode->leftNode = newNode;
                 }else{
-                    availableLeafs.pop_back();
+                    availableNodes.pop_back();
 
-                    currentLeaf->rightLeaf = newLeaf;
+                    currentNode->rightNode = newNode;
                 }
 
-                availableLeafs.push_back(newLeaf);
-                currentLeaf = newLeaf;
+                availableNodes.push_back(newNode);
+                currentNode = newNode;
             }
 
 
-            currentLeaf->hasCharacter = true;
-            currentLeaf->character = fileData[offSet+ 17 + numCharAdded];
+            currentNode->hasCharacter = true;
+            currentNode->character = fileData[offSet+ 17 + numCharAdded];
 
-            availableLeafs.pop_back();
+            availableNodes.pop_back();
             ++numCharAdded;
         }
     }
@@ -67,4 +67,52 @@ JpgHuffmanTree::JpgHuffmanTree(std::unique_ptr<unsigned char[]> & fileData, unsi
         << segmentLenght << " while the actual size of the table is " << numCharAdded+19 << ".\n";
         return;
     }
+}
+
+
+unsigned char JpgHuffmanTree::decodeChar(std::unique_ptr<unsigned char []> & scanData, 
+                                         unsigned int & byteOffset, unsigned int & bitOffset, int & err){
+
+    HuffmanNode currentNode = *rootNode;
+    std::weak_ptr<HuffmanNode> nextNodePointer;
+    unsigned char currentByte;
+    unsigned char bitMultiplier = pow(2,bitOffset);
+
+    while(!currentNode.hasCharacter){
+        
+        currentByte = scanData[byteOffset];
+
+        while(!currentNode.hasCharacter){
+
+            /// This condition checks if the current bit is 0 or 1
+            if(currentByte & bitMultiplier){// Bit equals 1
+                nextNodePointer = currentNode.rightNode;
+            }else{// Bit equals to 0
+                nextNodePointer = currentNode.leftNode;
+            }
+
+            if(nextNodePointer.expired()){
+                std::cerr << "ERROR: The program could not decode the huffmanCoding of the scan data\n";
+                err = -1;
+                return 0;
+            }
+
+            currentNode = *nextNodePointer.lock();
+
+            --bitOffset;
+            bitMultiplier /= 2;
+
+            if(bitOffset>7){// Its >7 because since its unsigned it overflows to a higher number
+                bitOffset = 7;
+                ++byteOffset;
+                bitMultiplier = 128;
+                break;
+            }
+        
+        }
+    }
+
+
+    return currentNode.character;
+
 }
