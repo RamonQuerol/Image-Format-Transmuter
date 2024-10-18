@@ -10,7 +10,7 @@
 #include "jpgComponentManagement.hpp"
 #include "jpgSegmentManagement.hpp"
 #include "jpgHuffmanTree.hpp"
-
+#include "jpgStructs.hpp"
 
 #define START_SEGEMENT_MARKER 55551 /// FF D8
 #define APP0_SEGMENT_MARKER 57599 /// FF E0
@@ -143,6 +143,8 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     }
 
     fileData.reset(); // We no longer need to store the file data so we just reset it
+
+
 
     return 0;
 
