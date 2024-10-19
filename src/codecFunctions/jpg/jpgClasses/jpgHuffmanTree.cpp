@@ -3,7 +3,7 @@
 #include <iostream>
 #include <math.h>
 
-
+#include "jpgUtils.hpp"
 
 JpgHuffmanTree::JpgHuffmanTree(std::unique_ptr<unsigned char[]> & fileData, unsigned int offSet, 
                                unsigned short segmentLenght, int & err){
@@ -78,37 +78,26 @@ unsigned char JpgHuffmanTree::decodeChar(std::unique_ptr<unsigned char []> & sca
     unsigned char currentByte;
     unsigned char bitMultiplier = pow(2,bitOffset);
 
+
     while(!currentNode.hasCharacter){
-        
-        currentByte = scanData[byteOffset];
 
-        while(!currentNode.hasCharacter){
+        /// This condition checks if the current bit is 0 or 1
+        if(currentByte & bitMultiplier){// Bit equals 1
+            nextNodePointer = currentNode.rightNode;
+        }else{// Bit equals to 0
+            nextNodePointer = currentNode.leftNode;
+        }
 
-            /// This condition checks if the current bit is 0 or 1
-            if(currentByte & bitMultiplier){// Bit equals 1
-                nextNodePointer = currentNode.rightNode;
-            }else{// Bit equals to 0
-                nextNodePointer = currentNode.leftNode;
-            }
+        if(nextNodePointer.expired()){
+            std::cerr << "ERROR: The program could not decode the huffmanCoding of the scan data\n";
+            err = -1;
+            return 0;
+        }
 
-            if(nextNodePointer.expired()){
-                std::cerr << "ERROR: The program could not decode the huffmanCoding of the scan data\n";
-                err = -1;
-                return 0;
-            }
+        currentNode = *nextNodePointer.lock();
 
-            currentNode = *nextNodePointer.lock();
-
-            --bitOffset;
-            bitMultiplier /= 2;
-
-            if(bitOffset>7){// Its >7 because since its unsigned it overflows to a higher number
-                bitOffset = 7;
-                ++byteOffset;
-                bitMultiplier = 128;
-                break;
-            }
-        
+        if(moveBitOffset(byteOffset, bitOffset, bitMultiplier)){
+            currentByte = scanData[byteOffset];
         }
     }
 

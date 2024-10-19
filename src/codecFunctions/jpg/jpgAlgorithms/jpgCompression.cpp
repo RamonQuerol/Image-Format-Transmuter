@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstring>
 
+#include "jpgUtils.hpp"
 
 int getCoefficient(std::unique_ptr<unsigned char []> & scanData, 
                    unsigned int & byteOffset, unsigned int & bitOffset, unsigned char coeffLenght){
@@ -20,13 +21,7 @@ int getCoefficient(std::unique_ptr<unsigned char []> & scanData,
         symbol = -1;
     }
 
-    --bitOffset;
-    bitMultiplier /= 2;
-
-    if(bitOffset>7){// Its >7 because since its unsigned it overflows to a higher number
-        bitOffset = 7;
-        ++byteOffset;
-        bitMultiplier = 128;
+    if(moveBitOffset(byteOffset, bitOffset, bitMultiplier)){
         currentByte = scanData[byteOffset];
     }
 
@@ -36,13 +31,7 @@ int getCoefficient(std::unique_ptr<unsigned char []> & scanData,
             coeff += 1 << i;
         }
 
-        --bitOffset;
-        bitMultiplier /= 2;
-
-        if(bitOffset>7){// Its >7 because since its unsigned it overflows to a higher number
-            bitOffset = 7;
-            ++byteOffset;
-            bitMultiplier = 128;
+        if(moveBitOffset(byteOffset, bitOffset, bitMultiplier)){
             currentByte = scanData[byteOffset];
         }
     }    
