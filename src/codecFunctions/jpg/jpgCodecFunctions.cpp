@@ -62,6 +62,13 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     unsigned int huffmanByteOffset = 0;
     unsigned int huffmanBitOffset = 7;
 
+    /// Blocks
+    std::vector<JpgBlock> yBlocks;
+    std::vector<JpgBlock> cbBlocks;
+    std::vector<JpgBlock> crBlocks;
+
+    JpgBlock tempBlock;
+
     /// Suport variables
     int err = 0;
 
@@ -146,6 +153,34 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     fileData.reset(); // We no longer need to store the file data so we just reset it
 
 
+    while(scanDataSize>huffmanByteOffset){
+
+        ///TODO: Right now this only allows jpgs with 4:4:4 sampling
+
+        /// Y component
+        if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, huffmanTrees, 0, 1, tempBlock)){
+            return -1;
+        }
+
+
+        yBlocks.push_back(tempBlock);
+
+
+        /// Cb component
+        if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, huffmanTrees, 2, 3, tempBlock)){
+            return -1;
+        }
+
+        cbBlocks.push_back(tempBlock);
+
+        /// Cr component
+        if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, huffmanTrees, 2, 3, tempBlock)){
+            return -1;
+        }
+
+        crBlocks.push_back(tempBlock);
+
+    }
 
     return 0;
 

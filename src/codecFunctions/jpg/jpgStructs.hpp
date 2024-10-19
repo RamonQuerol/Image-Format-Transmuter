@@ -13,7 +13,7 @@ struct Component{
 };
 
 struct JpgBlock{
-    unsigned char blockData[64];
+    int blockData[64] = {0};
 };
 
 

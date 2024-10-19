@@ -1,7 +1,55 @@
 #include "jpgCompression.hpp"
 
 #include <iostream>
+#include <cstring>
 
+
+int getCoefficient(std::unique_ptr<unsigned char []> & scanData, 
+                   unsigned int & byteOffset, unsigned int & bitOffset, unsigned char coeffLenght){
+    
+    int coeff;
+    int symbol;
+    unsigned char currentByte = scanData[byteOffset];
+    unsigned char bitMultiplier = 1 << bitOffset;
+    
+    coeff = 1 << (coeffLenght-1);
+    
+    if(currentByte & bitMultiplier){
+        symbol = 1;
+    }else{
+        symbol = -1;
+    }
+
+    --bitOffset;
+    bitMultiplier /= 2;
+
+    if(bitOffset>7){// Its >7 because since its unsigned it overflows to a higher number
+        bitOffset = 7;
+        ++byteOffset;
+        bitMultiplier = 128;
+        currentByte = scanData[byteOffset];
+    }
+
+    for(int i = coeffLenght-2 ; i>=0; --i){
+        
+        if(currentByte & bitMultiplier){
+            coeff += 1 << i;
+        }
+
+        --bitOffset;
+        bitMultiplier /= 2;
+
+        if(bitOffset>7){// Its >7 because since its unsigned it overflows to a higher number
+            bitOffset = 7;
+            ++byteOffset;
+            bitMultiplier = 128;
+            currentByte = scanData[byteOffset];
+        }
+    }    
+
+    coeff *= symbol;
+    return coeff;
+}
 
 int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData, 
                        unsigned int & byteOffset, unsigned int & bitOffset, 
@@ -11,8 +59,18 @@ int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData,
     int err = 0;
     unsigned char compressedAC;
     unsigned char numOfZeros;
+    unsigned char coeffLenght;
 
-    outputBlock.blockData[0] = huffmanTrees[dcTreePos].decodeChar(scanData, byteOffset, bitOffset, err);
+
+
+    coeffLenght = huffmanTrees[dcTreePos].decodeChar(scanData, byteOffset, bitOffset, err);
+
+    if(coeffLenght==0 || coeffLenght>11){
+        std::cerr << "Error: " << coeffLenght << " its not a valid lenght for a DC value\n";
+        return -1;
+    }
+
+    outputBlock.blockData[0] = getCoefficient(scanData, byteOffset, bitOffset, coeffLenght);
 
     for(int i = 1; i<64 && !err; ++i){
 
@@ -20,16 +78,26 @@ int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData,
 
         numOfZeros = compressedAC/16;
         
-        for(int j = 0; j<numOfZeros && i<64; ++j, ++i){
-            outputBlock.blockData[i] = 0;
-        }
+
+        i += numOfZeros;
 
         if(i>=64){
             std::cerr << "Error: During decompression the data of one of the blocks exceeded the usual block size of 64\n";
             return -1;
         }
 
-        outputBlock.blockData[i] = compressedAC%16;    
+        coeffLenght = compressedAC%16;
+
+        if(coeffLenght>10){
+            std::cerr << "Error: " << coeffLenght << " its not a valid lenght for a AC value\n";
+            return -1;
+        }
+
+        if(coeffLenght == 0){
+            break;
+        }
+
+        outputBlock.blockData[i] = getCoefficient(scanData, byteOffset, bitOffset, coeffLenght);
     }
 
     return err;
