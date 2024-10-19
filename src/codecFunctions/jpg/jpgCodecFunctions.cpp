@@ -10,6 +10,7 @@
 #include "jpgComponentManagement.hpp"
 #include "jpgSegmentManagement.hpp"
 #include "jpgHuffmanTree.hpp"
+#include "jpgCompression.hpp"
 #include "jpgStructs.hpp"
 
 #define START_SEGEMENT_MARKER 55551 /// FF D8

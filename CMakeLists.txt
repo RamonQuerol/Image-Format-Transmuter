@@ -23,6 +23,7 @@ add_executable(${PROJECT_NAME}
         src/codecFunctions/png/pngManagement/pngPixelManagement.cpp
         src/codecFunctions/jpg/jpgCodecFunctions.cpp
         src/codecFunctions/jpg/jpgClasses/jpgHuffmanTree.cpp
+        src/codecFunctions/jpg/jpgAlgorithms/jpgCompression.cpp
         src/codecFunctions/jpg/jpgManagement/jpgComponentManagement.cpp
         src/codecFunctions/jpg/jpgManagement/jpgSegmentManagement.cpp)
 
@@ -36,7 +37,9 @@ target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/s
 target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/codecFunctions/png/pngManagement)
 target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/codecFunctions/jpg)
 target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/codecFunctions/jpg/jpgClasses)
+target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/codecFunctions/jpg/jpgAlgorithms)
 target_include_directories(${PROJECT_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/codecFunctions/jpg/jpgManagement)
+
 
 
 # Link the external libraries

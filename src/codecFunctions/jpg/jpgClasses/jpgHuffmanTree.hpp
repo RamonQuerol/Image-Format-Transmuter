@@ -1,6 +1,9 @@
 #include <memory>
 #include <vector>
 
+#ifndef HUFFMAN_TREE_H
+#define HUFFMAN_TREE_H
+
 struct HuffmanNode{
     bool hasCharacter = false;
     int leafDepth;
@@ -31,3 +34,5 @@ class JpgHuffmanTree{
                                  unsigned int & byteOffset, unsigned int & bitOffset, int & err);
 
 };
+
+#endif
