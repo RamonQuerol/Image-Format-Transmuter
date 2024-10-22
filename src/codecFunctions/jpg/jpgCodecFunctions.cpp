@@ -12,6 +12,7 @@
 #include "jpgHuffmanTree.hpp"
 #include "jpgCompression.hpp"
 #include "jpgStructs.hpp"
+#include "jpgZigzag.hpp"
 
 #define START_SEGEMENT_MARKER 55551 /// FF D8
 #define APP0_SEGMENT_MARKER 57599 /// FF E0
@@ -68,6 +69,8 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     std::vector<JpgBlock> crBlocks;
 
     JpgBlock tempBlock;
+
+    unsigned char zigzagTable[64];
 
     /// Suport variables
     int err = 0;
@@ -153,28 +156,32 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     fileData.reset(); // We no longer need to store the file data so we just reset it
 
 
+    createZigzagTable(zigzagTable);
+
+
     while(scanDataSize>huffmanByteOffset){
 
         ///TODO: Right now this only allows jpgs with 4:4:4 sampling
 
         /// Y component
-        if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, huffmanTrees, 0, 1, tempBlock)){
+        if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, huffmanTrees, 0, 1, zigzagTable, tempBlock)){
             return -1;
         }
+
 
 
         yBlocks.push_back(tempBlock);
 
 
         /// Cb component
-        if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, huffmanTrees, 2, 3, tempBlock)){
+        if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, huffmanTrees, 2, 3, zigzagTable, tempBlock)){
             return -1;
         }
 
         cbBlocks.push_back(tempBlock);
 
         /// Cr component
-        if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, huffmanTrees, 2, 3, tempBlock)){
+        if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, huffmanTrees, 2, 3, zigzagTable, tempBlock)){
             return -1;
         }
 

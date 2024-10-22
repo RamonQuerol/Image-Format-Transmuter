@@ -24,6 +24,7 @@ add_executable(${PROJECT_NAME}
         src/codecFunctions/jpg/jpgCodecFunctions.cpp
         src/codecFunctions/jpg/jpgOther/jpgUtils.cpp
         src/codecFunctions/jpg/jpgClasses/jpgHuffmanTree.cpp
+        src/codecFunctions/jpg/jpgAlgorithms/jpgZigzag.cpp
         src/codecFunctions/jpg/jpgAlgorithms/jpgCompression.cpp
         src/codecFunctions/jpg/jpgManagement/jpgComponentManagement.cpp
         src/codecFunctions/jpg/jpgManagement/jpgSegmentManagement.cpp)

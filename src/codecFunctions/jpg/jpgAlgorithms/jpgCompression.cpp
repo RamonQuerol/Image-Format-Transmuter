@@ -43,7 +43,7 @@ int getCoefficient(std::unique_ptr<unsigned char []> & scanData,
 int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData, 
                        unsigned int & byteOffset, unsigned int & bitOffset, 
                        std::vector<JpgHuffmanTree> & huffmanTrees, int dcTreePos, int acTreePos,
-                       JpgBlock & outputBlock){
+                       unsigned char (& zigzagTable)[64], JpgBlock & outputBlock){
 
     int err = 0;
     unsigned char compressedAC;
@@ -86,7 +86,7 @@ int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData,
             break;
         }
 
-        outputBlock.blockData[i] = getCoefficient(scanData, byteOffset, bitOffset, coeffLenght);
+        outputBlock.blockData[zigzagTable[i]] = getCoefficient(scanData, byteOffset, bitOffset, coeffLenght);
     }
 
     return err;
