@@ -51,7 +51,7 @@ int extractScanData(std::unique_ptr<unsigned char[]> & fileData,unsigned int  & 
     }
 
     /// Now that we can calculate the actual size of the scanData we can create the array
-    scanData = std::make_unique<unsigned char[]>(checkedBytes-numOfFF);
+    scanData = std::make_unique<unsigned char[]>(checkedBytes-numOfFF+1);
     startCopyOffset = 0;
 
     /// Once we have scanned the scan data we can copy the data to the new array
@@ -69,5 +69,5 @@ int extractScanData(std::unique_ptr<unsigned char[]> & fileData,unsigned int  & 
     remainingBytes = uncheckedBytes;
     fileDataOffset += checkedBytes;
 
-    return checkedBytes-numOfFF;
+    return checkedBytes-numOfFF+1;
 }

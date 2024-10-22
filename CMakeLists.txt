@@ -5,6 +5,9 @@ project(imageTransmuter)
 # Find the external libraries
 find_package(ZLIB REQUIRED)
 
+#For debugging
+#set(CMAKE_CXX_FLAGS "-fsanitize=address")
+
 # 
 add_executable(${PROJECT_NAME} 
         src/main.cpp

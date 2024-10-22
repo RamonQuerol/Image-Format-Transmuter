@@ -160,7 +160,7 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     createZigzagTable(zigzagTable);
 
 
-    while(scanDataSize>huffmanByteOffset){
+    while(scanDataSize-1>huffmanByteOffset){
 
         ///TODO: Right now this only allows jpgs with 4:4:4 sampling
 
@@ -173,12 +173,17 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
         yBlocks.push_back(tempBlock);
 
 
+        std::memset(&tempBlock, 0, sizeof(JpgBlock));
+
         /// Cb component
         if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, huffmanTrees, 2, 3, zigzagTable, tempBlock)){
             return -1;
         }
 
         cbBlocks.push_back(tempBlock);
+
+        std::memset(&tempBlock, 0, sizeof(JpgBlock));
+
 
         /// Cr component
         if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, huffmanTrees, 2, 3, zigzagTable, tempBlock)){
@@ -187,6 +192,7 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
         crBlocks.push_back(tempBlock);
 
+        std::memset(&tempBlock, 0, sizeof(JpgBlock));
     }
 
     /// Reverse the differential encoding on the DC values
