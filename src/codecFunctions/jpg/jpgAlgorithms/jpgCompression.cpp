@@ -51,7 +51,6 @@ int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData,
     unsigned char coeffLenght;
 
 
-
     coeffLenght = huffmanTrees[dcTreePos].decodeChar(scanData, byteOffset, bitOffset, err);
 
     if(coeffLenght>11){
@@ -84,11 +83,14 @@ int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData,
             return -1;
         }
 
-        if(coeffLenght == 0){
+        // If its 00 the rest of the chunk its filled with 0s
+        if(compressedAC == 0){
             break;
         }
 
-        outputBlock.blockData[zigzagTable[i]] = getCoefficient(scanData, byteOffset, bitOffset, coeffLenght);
+        if(coeffLenght != 0){
+            outputBlock.blockData[zigzagTable[i]] = getCoefficient(scanData, byteOffset, bitOffset, coeffLenght);
+        }
     }
 
     return err;
