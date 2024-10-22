@@ -9,6 +9,7 @@
 #include "fileDataManagementUtils.hpp"
 #include "jpgComponentManagement.hpp"
 #include "jpgSegmentManagement.hpp"
+#include "jpgDiffEncoding.hpp"
 #include "jpgHuffmanTree.hpp"
 #include "jpgCompression.hpp"
 #include "jpgStructs.hpp"
@@ -169,7 +170,6 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
         }
 
 
-
         yBlocks.push_back(tempBlock);
 
 
@@ -188,6 +188,12 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
         crBlocks.push_back(tempBlock);
 
     }
+
+    /// Reverse the differential encoding on the DC values
+
+    reverseDifferentialEncoding(yBlocks);
+    reverseDifferentialEncoding(cbBlocks);
+    reverseDifferentialEncoding(crBlocks);
 
     return 0;
 
