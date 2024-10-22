@@ -75,7 +75,7 @@ unsigned char JpgHuffmanTree::decodeChar(std::unique_ptr<unsigned char []> & sca
 
     HuffmanNode currentNode = *rootNode;
     std::weak_ptr<HuffmanNode> nextNodePointer;
-    unsigned char currentByte;
+    unsigned char currentByte = scanData[byteOffset];
     unsigned char bitMultiplier = pow(2,bitOffset);
 
 
