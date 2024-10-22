@@ -54,12 +54,14 @@ int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData,
 
     coeffLenght = huffmanTrees[dcTreePos].decodeChar(scanData, byteOffset, bitOffset, err);
 
-    if(coeffLenght==0 || coeffLenght>11){
+    if(coeffLenght>11){
         std::cerr << "Error: " << coeffLenght << " its not a valid lenght for a DC value\n";
         return -1;
     }
 
-    outputBlock.blockData[0] = getCoefficient(scanData, byteOffset, bitOffset, coeffLenght);
+    if(coeffLenght!=0){ // If its 0, the result should be 0, which is already the value outputBlock.blockData[0] has
+        outputBlock.blockData[0] = getCoefficient(scanData, byteOffset, bitOffset, coeffLenght);
+    }
 
     for(int i = 1; i<64 && !err; ++i){
 
