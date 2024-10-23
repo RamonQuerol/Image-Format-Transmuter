@@ -15,6 +15,7 @@
 #include "jpgCompression.hpp"
 #include "jpgStructs.hpp"
 #include "jpgZigzag.hpp"
+#include "jpgDCT.hpp"
 
 #define START_SEGEMENT_MARKER 55551 /// FF D8
 #define APP0_SEGMENT_MARKER 57599 /// FF E0
@@ -230,6 +231,12 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     reverseQuantization(quantizationTables[0], yBlocks);
     reverseQuantization(quantizationTables[1], cbBlocks);
     reverseQuantization(quantizationTables[1], crBlocks);
+
+    /// DCT
+
+    inverseDCT(yBlocks);
+    inverseDCT(cbBlocks);
+    inverseDCT(crBlocks);
 
     return 0;
 
