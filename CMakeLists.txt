@@ -30,6 +30,7 @@ add_executable(${PROJECT_NAME}
         src/codecFunctions/jpg/jpgAlgorithms/jpgZigzag.cpp
         src/codecFunctions/jpg/jpgAlgorithms/jpgCompression.cpp
         src/codecFunctions/jpg/jpgAlgorithms/jpgDiffEncoding.cpp
+        src/codecFunctions/jpg/jpgAlgorithms/jpgQuantization.cpp
         src/codecFunctions/jpg/jpgManagement/jpgComponentManagement.cpp
         src/codecFunctions/jpg/jpgManagement/jpgSegmentManagement.cpp)
 

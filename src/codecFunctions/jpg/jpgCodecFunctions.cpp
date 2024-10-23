@@ -10,6 +10,7 @@
 #include "jpgComponentManagement.hpp"
 #include "jpgSegmentManagement.hpp"
 #include "jpgDiffEncoding.hpp"
+#include "jpgQuantization.hpp"
 #include "jpgHuffmanTree.hpp"
 #include "jpgCompression.hpp"
 #include "jpgStructs.hpp"
@@ -73,6 +74,12 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
     unsigned char zigzagTable[64];
 
+    /// Quantization
+
+    std::vector<QuantificationTable> quantizationTables;
+
+    QuantificationTable tempQuantTable;
+
     /// Suport variables
     int err = 0;
 
@@ -120,6 +127,21 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
                 case PROGRESSIVE_SEGEMENT_MARKER:
                     std::cerr << "The program does not currently support progressive DCT-based jpeg\n";
                     return -1;
+                case QUANTIZATION_SEGMENT_MARKER:
+                    if(segmentLenght!=67){
+
+                        if(segmentLenght>67){
+                            std::cerr << "One of the quantization tables in the input jpeg has more bytes than it is supossed to have";
+                        }else {
+                            std::cerr << "One of the quantization tables in the input jpeg has less bytes than it is supossed to have";
+                        }
+                        return -1;
+                    }
+
+                    memcpy(&tempQuantTable, fileDataPointer + fileDataOffset + 1, 64);
+                    quantizationTables.push_back(tempQuantTable);
+                    break;
+
                 case HUFFMAN_SEGMENT_MARKER:
                     huffmanTrees.push_back(JpgHuffmanTree(fileData, fileDataOffset, segmentLenght, err));
                     ++numHuffTrees;
@@ -200,6 +222,14 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     reverseDifferentialEncoding(yBlocks);
     reverseDifferentialEncoding(cbBlocks);
     reverseDifferentialEncoding(crBlocks);
+
+    /// At this point every Block its independent of every other block in the image
+
+    /// Quantization
+
+    reverseQuantization(quantizationTables[0], yBlocks);
+    reverseQuantization(quantizationTables[1], cbBlocks);
+    reverseQuantization(quantizationTables[1], crBlocks);
 
     return 0;
 

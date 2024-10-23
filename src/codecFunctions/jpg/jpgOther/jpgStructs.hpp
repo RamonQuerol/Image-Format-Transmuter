@@ -16,6 +16,9 @@ struct JpgBlock{
     int blockData[64] = {0};
 };
 
+struct QuantificationTable{
+    unsigned char data[64];
+};
 
 #endif
 
