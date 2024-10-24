@@ -9,6 +9,7 @@
 #include "fileDataManagementUtils.hpp"
 #include "jpgComponentManagement.hpp"
 #include "jpgSegmentManagement.hpp"
+#include "jpgPixelManagement.hpp"
 #include "jpgDiffEncoding.hpp"
 #include "jpgQuantization.hpp"
 #include "jpgHuffmanTree.hpp"
@@ -16,6 +17,8 @@
 #include "jpgStructs.hpp"
 #include "jpgZigzag.hpp"
 #include "jpgDCT.hpp"
+
+#include "configEnums.hpp"
 
 #define START_SEGEMENT_MARKER 55551 /// FF D8
 #define APP0_SEGMENT_MARKER 57599 /// FF E0
@@ -80,6 +83,10 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     std::vector<QuantificationTable> quantizationTables;
 
     QuantificationTable tempQuantTable;
+
+    /// Result variables
+    std::unique_ptr<Pixel []> imagePixels;
+    Metadata metadata;
 
     /// Suport variables
     int err = 0;
@@ -218,7 +225,6 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
         std::memset(&tempBlock, 0, sizeof(JpgBlock));
     }
 
-    /// Reverse the differential encoding on the DC values
 
     reverseDifferentialEncoding(yBlocks);
     reverseDifferentialEncoding(cbBlocks);
@@ -237,6 +243,24 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     inverseDCT(yBlocks);
     inverseDCT(cbBlocks);
     inverseDCT(crBlocks);
+
+
+    /// Translate the data to pixels
+
+    imagePixels = std::make_unique<Pixel []>(height*width);
+
+    yCbCrToPixels(height, width, yBlocks, cbBlocks, crBlocks, imagePixels);
+
+    /// Last metadata
+
+    metadata.colorType = COLOR;
+
+    /// Add everything to decodedImage
+
+    decodedImage.metadata = metadata;
+    decodedImage.heigth = height;
+    decodedImage.width = width;
+    decodedImage.imageData = move(imagePixels);
 
     return 0;
 

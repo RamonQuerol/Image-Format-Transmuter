@@ -66,8 +66,6 @@ int main(int argc, char* argv[]){
             break;
         case JPG:
             err = decodeJPG(inputFile, decodedImage);
-            std::cout << err << "\n";
-            return 0;
             break;
         case UNDEFINED_FORMAT:
             std::cerr << "You must define the input file format. Use --help to know more.\n";
