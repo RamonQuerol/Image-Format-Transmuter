@@ -9,16 +9,13 @@ int getCoefficient(std::unique_ptr<unsigned char []> & scanData,
                    unsigned int & byteOffset, unsigned int & bitOffset, unsigned char coeffLenght){
     
     int coeff;
-    int symbol;
     unsigned char currentByte = scanData[byteOffset];
-    unsigned char bitMultiplier = 1 << bitOffset;
-    
-    coeff = 1 << (coeffLenght-1);
+    unsigned char bitMultiplier = 1 << bitOffset;    
     
     if(currentByte & bitMultiplier){
-        symbol = 1;
+        coeff = 1 << (coeffLenght-1);
     }else{
-        symbol = -1;
+        coeff = -1*(1 << coeffLenght) + 1;
     }
 
     if(moveBitOffset(byteOffset, bitOffset, bitMultiplier)){
@@ -36,7 +33,6 @@ int getCoefficient(std::unique_ptr<unsigned char []> & scanData,
         }
     }    
 
-    coeff *= symbol;
     return coeff;
 }
 
