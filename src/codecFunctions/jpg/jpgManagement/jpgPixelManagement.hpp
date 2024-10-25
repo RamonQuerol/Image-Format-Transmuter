@@ -5,9 +5,9 @@
 #include "dataStructures.hpp"
 
 #include "jpgStructs.hpp"
+#include "jpgEnums.hpp"
 
 /// Data to Pixels
 
-void yCbCrToPixels(unsigned short height, unsigned short width,
-                   std::vector<JpgBlock> & yBlocks, std::vector<JpgBlock> & cbBlocks, std::vector<JpgBlock> & crBlocks,
-                   std::unique_ptr<Pixel []> & outputPixels);
+void blocksToPixels(unsigned short height, unsigned short width, JpgType jpgType,
+                    std::vector<Component> & components,  std::unique_ptr<Pixel []> & outputPixels);

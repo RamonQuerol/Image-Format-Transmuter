@@ -16,6 +16,7 @@
 #include "jpgCompression.hpp"
 #include "jpgStructs.hpp"
 #include "jpgZigzag.hpp"
+#include "jpgEnums.hpp"
 #include "jpgDCT.hpp"
 
 #include "configEnums.hpp"
@@ -62,6 +63,8 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     std::vector<Component> components;
     Component tempComponent;
     int numComponents = 0;
+    
+    JpgType jpgType;
 
     /// Huffman trees
     std::vector<JpgHuffmanTree> dcHuffmanTrees; 
@@ -234,12 +237,18 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     /// Translate the data to pixels
 
     imagePixels = std::make_unique<Pixel []>(height*width);
+    jpgType = determineJpgType(numComponents, components[0]);
 
-    yCbCrToPixels(height, width, components[0].blocks, components[1].blocks, components[2].blocks, imagePixels);
+    blocksToPixels(height, width, jpgType, components, imagePixels);
 
     /// Last metadata
 
-    metadata.colorType = COLOR;
+    if(jpgType==GRAY_JPG){
+        metadata.colorType = GRAY;
+    }else{
+        metadata.colorType = COLOR;
+    }
+    
 
     /// Add everything to decodedImage
 

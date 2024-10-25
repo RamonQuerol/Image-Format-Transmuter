@@ -2,6 +2,13 @@
 
 #include <iostream>
 
+/// General functions prototypes
+
+void color444ToPixels(unsigned short height, unsigned short width,
+                   std::vector<JpgBlock> & yBlocks, std::vector<JpgBlock> & cbBlocks, std::vector<JpgBlock> & crBlocks,
+                   std::unique_ptr<Pixel []> & outputPixels);
+
+
 /// Individual block funcitions prototypes
 
 void yCbCrBlockToPixels(unsigned short height, unsigned short width,
@@ -11,7 +18,22 @@ void yCbCrBlockToPixels(unsigned short height, unsigned short width,
 
 /// Main Functions
 
-void yCbCrToPixels(unsigned short height, unsigned short width,
+
+void blocksToPixels(unsigned short height, unsigned short width, JpgType jpgType,
+                    std::vector<Component> & components,  std::unique_ptr<Pixel []> & outputPixels){
+
+    switch (jpgType){
+    case COLOR_4_4_4:
+        color444ToPixels(height, width, components[0].blocks, 
+                            components[1].blocks, components[2].blocks, outputPixels);
+        break;
+    default:
+        break;
+    }
+
+}
+
+void color444ToPixels(unsigned short height, unsigned short width,
                    std::vector<JpgBlock> & yBlocks, std::vector<JpgBlock> & cbBlocks, std::vector<JpgBlock> & crBlocks,
                    std::unique_ptr<Pixel []> & outputPixels){
 
