@@ -38,7 +38,7 @@ int getCoefficient(std::unique_ptr<unsigned char []> & scanData,
 
 int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData, 
                        unsigned int & byteOffset, unsigned int & bitOffset, 
-                       std::vector<JpgHuffmanTree> & huffmanTrees, int dcTreePos, int acTreePos,
+                       JpgHuffmanTree & dcHuffmanTree, JpgHuffmanTree & acHuffmanTree,
                        unsigned char (& zigzagTable)[64], JpgBlock & outputBlock){
 
     int err = 0;
@@ -47,7 +47,7 @@ int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData,
     unsigned char coeffLenght;
 
 
-    coeffLenght = huffmanTrees[dcTreePos].decodeChar(scanData, byteOffset, bitOffset, err);
+    coeffLenght = dcHuffmanTree.decodeChar(scanData, byteOffset, bitOffset, err);
 
     if(coeffLenght>11){
         std::cerr << "Error: " << coeffLenght << " its not a valid lenght for a DC value\n";
@@ -60,7 +60,7 @@ int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData,
 
     for(int i = 1; i<64 && !err; ++i){
 
-        compressedAC = huffmanTrees[acTreePos].decodeChar(scanData, byteOffset, bitOffset, err);
+        compressedAC = acHuffmanTree.decodeChar(scanData, byteOffset, bitOffset, err);
 
         numOfZeros = compressedAC/16;
         

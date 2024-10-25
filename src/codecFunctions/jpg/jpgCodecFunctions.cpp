@@ -59,21 +59,17 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     unsigned short width;
 
     /// Component managing
-    std::unique_ptr<Component []> components;
+    std::vector<Component> components;
+    Component tempComponent;
     int numComponents = 0;
 
     /// Huffman trees
-    std::vector<JpgHuffmanTree> huffmanTrees; 
-    unsigned int numHuffTrees = 0;
-
+    std::vector<JpgHuffmanTree> dcHuffmanTrees; 
+    std::vector<JpgHuffmanTree> acHuffmanTrees;
     unsigned int huffmanByteOffset = 0;
     unsigned int huffmanBitOffset = 7;
 
     /// Blocks
-    std::vector<JpgBlock> yBlocks;
-    std::vector<JpgBlock> cbBlocks;
-    std::vector<JpgBlock> crBlocks;
-
     JpgBlock tempBlock;
 
     unsigned char zigzagTable[64];
@@ -123,12 +119,13 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
                     width = extractBigEndianUshort(fileData, fileDataOffset +3);
 
                     numComponents = fileData[fileDataOffset + 5];
-                    components = std::make_unique<Component[]>(numComponents);
 
                     for(int i = 0; i<numComponents; ++i){
-                        components[i].componentID = fileData[fileDataOffset+6+i];
-                        components[i].sampligFactors = fileData[fileDataOffset + 7 + i];
-                        components[i].quatizationTable = fileData[fileDataOffset + 8 + i];
+                        tempComponent.componentID = fileData[fileDataOffset+6+i*3];
+                        getComponentSamplingFactors(fileData[fileDataOffset + 7 + i*3], tempComponent);
+                        tempComponent.quatizationTable = fileData[fileDataOffset + 8 + i*3];
+                        
+                        components.push_back(tempComponent);
                     }
 
                     break;
@@ -151,8 +148,11 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
                     break;
 
                 case HUFFMAN_SEGMENT_MARKER:
-                    huffmanTrees.push_back(JpgHuffmanTree(fileData, fileDataOffset, segmentLenght, err));
-                    ++numHuffTrees;
+                    if(fileData[fileDataOffset]/16){ // 1 means that is an AC huffman table
+                        acHuffmanTrees.push_back(JpgHuffmanTree(fileData, fileDataOffset, segmentLenght, err));
+                    }else{ // 0 means that is a DC huffman table
+                        dcHuffmanTrees.push_back(JpgHuffmanTree(fileData, fileDataOffset, segmentLenght, err));
+                    }
                     break;
                 case SCAN_SEGMENT_MARKER:
 
@@ -194,62 +194,48 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
         ///TODO: Right now this only allows jpgs with 4:4:4 sampling
 
-        /// Y component
-        if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, huffmanTrees, 0, 1, zigzagTable, tempBlock)){
-            return -1;
+        for(auto &component : components){
+            
+            for(int i = 0; i<component.verticalSampling*component.horizontalSampling; ++i){
+
+                if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, 
+                    dcHuffmanTrees[component.huffmanTableDC], acHuffmanTrees[component.huffmanTableAC], 
+                    zigzagTable, tempBlock)){
+                    return -1;
+                }
+
+                component.blocks.push_back(tempBlock);
+
+                std::memset(&tempBlock, 0, sizeof(JpgBlock));
+            }
         }
-
-
-        yBlocks.push_back(tempBlock);
-
-
-        std::memset(&tempBlock, 0, sizeof(JpgBlock));
-
-        /// Cb component
-        if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, huffmanTrees, 2, 3, zigzagTable, tempBlock)){
-            return -1;
-        }
-
-        cbBlocks.push_back(tempBlock);
-
-        std::memset(&tempBlock, 0, sizeof(JpgBlock));
-
-
-        /// Cr component
-        if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, huffmanTrees, 2, 3, zigzagTable, tempBlock)){
-            return -1;
-        }
-
-        crBlocks.push_back(tempBlock);
-
-        std::memset(&tempBlock, 0, sizeof(JpgBlock));
     }
 
 
-    reverseDifferentialEncoding(yBlocks);
-    reverseDifferentialEncoding(cbBlocks);
-    reverseDifferentialEncoding(crBlocks);
+    for(auto &component : components){
+        reverseDifferentialEncoding(component.blocks);
+    }
 
     /// At this point every Block its independent of every other block in the image
 
     /// Quantization
 
-    reverseQuantization(quantizationTables[0], yBlocks);
-    reverseQuantization(quantizationTables[1], cbBlocks);
-    reverseQuantization(quantizationTables[1], crBlocks);
+    for(auto &component : components){
+        reverseQuantization(quantizationTables[component.quatizationTable], component.blocks);
+    }
 
     /// DCT
 
-    inverseDCT(yBlocks);
-    inverseDCT(cbBlocks);
-    inverseDCT(crBlocks);
+    for(auto &component : components){
+        inverseDCT(component.blocks);
+    }
 
 
     /// Translate the data to pixels
 
     imagePixels = std::make_unique<Pixel []>(height*width);
 
-    yCbCrToPixels(height, width, yBlocks, cbBlocks, crBlocks, imagePixels);
+    yCbCrToPixels(height, width, components[0].blocks, components[1].blocks, components[2].blocks, imagePixels);
 
     /// Last metadata
 

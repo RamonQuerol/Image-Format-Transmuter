@@ -6,5 +6,5 @@
 
 int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData, 
                        unsigned int & byteOffset, unsigned int & bitOffset, 
-                       std::vector<JpgHuffmanTree> & huffmanTrees, int dcTreePos, int acTreePos,
+                       JpgHuffmanTree & dcHuffmanTree, JpgHuffmanTree & acHuffmanTree,
                        unsigned char (& zigzagTable)[64], JpgBlock & outputBlock);

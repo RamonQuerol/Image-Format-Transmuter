@@ -1,16 +1,9 @@
 
+#include <vector>
 
 #ifndef JPG_STRUCTS_H
 #define JPG_STRUCTS_H
 
-
-struct Component{
-    unsigned char componentID;
-    unsigned char sampligFactors;
-    unsigned char quatizationTable;
-    unsigned char huffmanTableDC;
-    unsigned char huffmanTableAC;
-};
 
 struct JpgBlock{
     int blockData[64] = {0};
@@ -18,6 +11,16 @@ struct JpgBlock{
 
 struct QuantificationTable{
     unsigned char data[64];
+};
+
+struct Component{
+    unsigned char componentID;
+    unsigned char horizontalSampling;
+    unsigned char verticalSampling;
+    unsigned char quatizationTable;
+    unsigned char huffmanTableDC;
+    unsigned char huffmanTableAC;
+    std::vector<JpgBlock> blocks;
 };
 
 #endif
