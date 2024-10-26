@@ -21,6 +21,9 @@
 
 #include "configEnums.hpp"
 
+
+#include <chrono>
+
 #define START_SEGEMENT_MARKER 55551 /// FF D8
 #define APP0_SEGMENT_MARKER 57599 /// FF E0
 #define APP1_SEGMENT_MARKER 57855 // FF E1
@@ -91,6 +94,8 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     int err = 0;
 
     //// Reading the file
+
+    auto start = std::chrono::system_clock::now();
 
     fileData = std::make_unique<unsigned char[]>(fileSize); // This pointer will be reseted once the while is done
     inputFile.read(reinterpret_cast<char *>(fileData.get()), fileSize);
@@ -189,6 +194,7 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
     fileData.reset(); // We no longer need to store the file data so we just reset it
 
+    auto decode = std::chrono::system_clock::now();
 
     createZigzagTable(zigzagTable);
 
@@ -215,6 +221,8 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     }
 
 
+    auto differ = std::chrono::system_clock::now();
+
     for(auto &component : components){
         reverseDifferentialEncoding(component.blocks);
     }
@@ -223,11 +231,15 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
     /// Quantization
 
+    auto quant = std::chrono::system_clock::now();
+
     for(auto &component : components){
         reverseQuantization(quantizationTables[component.quatizationTable], component.blocks);
     }
 
     /// DCT
+
+    auto dct = std::chrono::system_clock::now();
 
     for(auto &component : components){
         inverseDCT(component.blocks);
@@ -236,10 +248,28 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
     /// Translate the data to pixels
 
+    auto pixels = std::chrono::system_clock::now();
+
     imagePixels = std::make_unique<Pixel []>(height*width);
     jpgType = determineJpgType(numComponents, components[0]);
 
     blocksToPixels(height, width, jpgType, components, imagePixels);
+
+    auto end = std::chrono::system_clock::now();
+
+    std::chrono::duration<double> readT = decode - start;
+    std::chrono::duration<double> decodeT = differ - decode;
+    std::chrono::duration<double> differT = quant - differ;
+    std::chrono::duration<double> quantT = dct - quant;
+    std::chrono::duration<double> dctT = pixels - dct;
+    std::chrono::duration<double> pixelsT = end - pixels;
+
+    std::cout << "Read file:\t" << readT.count() << "\n";
+    std::cout << "Decode:  \t" << decodeT.count() << "\n";
+    std::cout << "Differential:\t" << differT.count() << "\n";
+    std::cout << "Quantification:\t" << quantT.count() << "\n";
+    std::cout << "DCT:    \t" << readT.count() << "\n";
+    std::cout << "Copy to pixels:\t" << pixelsT.count() << "\n";
 
     /// Last metadata
 
