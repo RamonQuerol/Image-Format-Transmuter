@@ -79,6 +79,7 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     JpgBlock tempBlock;
 
     unsigned char zigzagTable[64];
+    createZigzagTable(zigzagTable);
 
     /// Quantization
 
@@ -151,7 +152,10 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
                         return -1;
                     }
 
-                    memcpy(&tempQuantTable, fileDataPointer + fileDataOffset + 1, 64);
+                    for(int i = 0; i<64; ++i){
+                        tempQuantTable.data[zigzagTable[i]] = fileData[fileDataOffset+1+i];
+                    }
+
                     quantizationTables.push_back(tempQuantTable);
                     break;
 
@@ -196,7 +200,6 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
     auto decode = std::chrono::system_clock::now();
 
-    createZigzagTable(zigzagTable);
 
 
     while(scanDataSize-1>huffmanByteOffset){
@@ -267,7 +270,7 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     std::cout << "Read file:\t" << readT.count() << "\n";
     std::cout << "Decode:  \t" << decodeT.count() << "\n";
     std::cout << "Differential:\t" << differT.count() << "\n";
-    std::cout << "Quantification:\t" << quantT.count() << "\n";
+    std::cout << "Quantization:\t" << quantT.count() << "\n";
     std::cout << "DCT:    \t" << readT.count() << "\n";
     std::cout << "Copy to pixels:\t" << pixelsT.count() << "\n";
 
