@@ -270,8 +270,8 @@ void colorVerticalBlockToPixels(unsigned short height, unsigned short width,
         for(int j = 0; j<8 && widthOffset<width; ++j, ++widthOffset){
 
             outputPixels[heightOffset*width+widthOffset] = 
-            yCbCrToPixel(yBlock.blockData[i*8+j], cbBlock.blockData[i*4 + 8*acOffset + j], 
-                        crBlock.blockData[i*4 + 8*acOffset + j]);
+            yCbCrToPixel(yBlock.blockData[i*8+j], cbBlock.blockData[(i/2 + acOffset)*8 + j], 
+                        crBlock.blockData[(i/2 + acOffset)*8 + j]);
         }
         widthOffset = currentWidth;
     }
@@ -291,8 +291,8 @@ void color420BlockToPixels(unsigned short height, unsigned short width,
         for(int j = 0; j<8 && widthOffset<width; ++j, ++widthOffset){
 
             outputPixels[heightOffset*width+widthOffset] = 
-            yCbCrToPixel(yBlock.blockData[i*8+j], cbBlock.blockData[i*4 + 8*acHeight + j/2 + acWidth], 
-                        crBlock.blockData[i*4 + 8*acHeight + j/2 + acWidth]);
+            yCbCrToPixel(yBlock.blockData[i*8+j], cbBlock.blockData[(i/2 + acHeight)*8 + j/2 + acWidth], 
+                        crBlock.blockData[(i/2 + acHeight)*8 + j/2 + acWidth]);
         }
         widthOffset = currentWidth;
     }
