@@ -1,6 +1,7 @@
 #include "jpgPixelManagement.hpp"
 
 #include <iostream>
+#include <cstring>
 
 /// General function prototypes
 
@@ -22,6 +23,10 @@ void colorVerticalToPixels(unsigned short height, unsigned short width,
 void color420ToPixels(unsigned short height, unsigned short width,
                       std::vector<JpgBlock> & yBlocks, std::vector<JpgBlock> & cbBlocks, 
                       std::vector<JpgBlock> & crBlocks, std::unique_ptr<Pixel []> & outputPixels);
+
+
+void grayToPixels(unsigned short height, unsigned short width,
+                  std::vector<JpgBlock> & blocks, std::unique_ptr<Pixel []> & outputPixels);
 
 /// Individual block function prototypes
 
@@ -49,6 +54,11 @@ void color420BlockToPixels(unsigned short height, unsigned short width,
                            JpgBlock & yBlock, JpgBlock & cbBlock, JpgBlock & crBlock,
                            std::unique_ptr<Pixel []> & outputPixels);
 
+
+void grayBlockToPixel(unsigned short height, unsigned short width,
+                      unsigned int currentHeight, unsigned int currentWidth,
+                      JpgBlock & block, std::unique_ptr<Pixel []> & outputPixels);
+
 /// Individual pixel function prototypes
 
 Pixel yCbCrToPixel(int yData, int cbData, int crData);
@@ -75,6 +85,9 @@ void blocksToPixels(unsigned short height, unsigned short width, JpgType jpgType
     case COLOR_4_2_0:
         color420ToPixels(height, width, components[0].blocks, 
                          components[1].blocks, components[2].blocks, outputPixels);
+        break;
+    case GRAY_JPG:
+        grayToPixels(height, width, components[0].blocks, outputPixels);
         break;
     default:
         break;
@@ -185,6 +198,23 @@ void color420ToPixels(unsigned short height, unsigned short width,
     }
 }
 
+
+void grayToPixels(unsigned short height, unsigned short width,
+                  std::vector<JpgBlock> & blocks, std::unique_ptr<Pixel []> & outputPixels){
+
+    int blocksPerColumn = height/8 + (height%8 ? 1 : 0);
+    int blocksPerRow = width/8 + (width%8 ? 1 : 0);
+
+    for(int blockY = 0; blockY<blocksPerColumn; ++blockY){
+        
+        for(int blockX = 0; blockX<blocksPerRow; ++blockX){
+            grayBlockToPixel(height, width, blockY*8, blockX*8, 
+                            blocks[blockY*blocksPerRow + blockX], outputPixels);
+        }
+    }
+
+}
+
 /// Individual block funcitions
 
 void color444BlockToPixels(unsigned short height, unsigned short width,
@@ -266,6 +296,42 @@ void color420BlockToPixels(unsigned short height, unsigned short width,
         }
         widthOffset = currentWidth;
     }
+}
+
+
+void grayBlockToPixel(unsigned short height, unsigned short width,
+                      unsigned int currentHeight, unsigned int currentWidth,
+                      JpgBlock & block, std::unique_ptr<Pixel []> & outputPixels){
+                            
+    Pixel pixel;
+    int grayValue;
+    unsigned char grayByte;
+    unsigned int heightOffset = currentHeight;
+    unsigned int widthOffset = currentWidth;
+    unsigned int blockOffset = 0;
+
+    pixel.alpha = 255;
+
+    for(int i = 0; i<8 && heightOffset<height; ++i, ++heightOffset){
+        for(int j = 0; j<8 && widthOffset<width; ++j, ++widthOffset, ++blockOffset){
+            
+            grayValue = block.blockData[blockOffset] +128;
+
+            if(grayValue < 0){
+                grayByte = 0;
+            }else if(grayValue > 255){
+                grayByte = 255;
+            }else{
+                grayByte = grayValue;
+            }
+
+            memset(&pixel, grayByte, 3);
+            
+            outputPixels[heightOffset*width+widthOffset] = pixel;
+        }
+        widthOffset = currentWidth;
+    }
+
 }
 
 /// Pixel functions
