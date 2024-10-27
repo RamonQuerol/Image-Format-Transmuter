@@ -4,6 +4,7 @@
 #ifndef JPG_ENUMS_H
 #define JPG_ENUMS_H
 
+/// @brief Defines the color and subsampling of the jpg image
 enum JpgType{
     GRAY_JPG,
     COLOR_4_4_4,

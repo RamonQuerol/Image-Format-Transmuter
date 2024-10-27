@@ -5,6 +5,8 @@
 
 #include "jpgUtils.hpp"
 
+
+/// Gets the coefficient store in the next coeffLenght bits in scanData and moves the offsets
 int getCoefficient(std::unique_ptr<unsigned char []> & scanData, 
                    unsigned int & byteOffset, unsigned int & bitOffset, unsigned char coeffLenght){
     
@@ -36,6 +38,8 @@ int getCoefficient(std::unique_ptr<unsigned char []> & scanData,
     return coeff;
 }
 
+
+
 int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData, 
                        unsigned int & byteOffset, unsigned int & bitOffset, 
                        JpgHuffmanTree & dcHuffmanTree, JpgHuffmanTree & acHuffmanTree,
@@ -46,6 +50,7 @@ int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData,
     unsigned char numOfZeros;
     unsigned char coeffLenght;
 
+    /// DC coefficient
 
     coeffLenght = dcHuffmanTree.decodeChar(scanData, byteOffset, bitOffset, err);
 
@@ -58,6 +63,8 @@ int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData,
         outputBlock.blockData[0] = getCoefficient(scanData, byteOffset, bitOffset, coeffLenght);
     }
 
+
+    /// AC coefficients
     for(int i = 1; i<64 && !err; ++i){
 
         compressedAC = acHuffmanTree.decodeChar(scanData, byteOffset, bitOffset, err);
