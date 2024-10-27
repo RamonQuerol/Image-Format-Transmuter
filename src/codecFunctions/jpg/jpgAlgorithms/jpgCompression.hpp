@@ -3,8 +3,8 @@
 #include "jpgStructs.hpp"
 #include "jpgHuffmanTree.hpp"
 
-// Uses the huffmanTrees and the zigzagTable to generate the next JpgBlock from the scanData
-int decompressJpgBlock(std::unique_ptr<unsigned char []> & scanData, 
-                       unsigned int & byteOffset, unsigned int & bitOffset, 
-                       JpgHuffmanTree & dcHuffmanTree, JpgHuffmanTree & acHuffmanTree,
-                       unsigned char (& zigzagTable)[64], JpgBlock & outputBlock);
+
+int decompressBaslineJpg(std::unique_ptr<unsigned char []> & scanData, unsigned int scanDataSize,
+                         std::vector<Component> & components, unsigned char (& zigzagTable)[64],
+                         std::vector<JpgHuffmanTree> & dcHuffmanTrees, 
+                         std::vector<JpgHuffmanTree> & acHuffmanTrees);

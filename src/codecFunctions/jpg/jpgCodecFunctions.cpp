@@ -70,11 +70,8 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     /// Huffman trees
     std::vector<JpgHuffmanTree> dcHuffmanTrees; 
     std::vector<JpgHuffmanTree> acHuffmanTrees;
-    unsigned int huffmanByteOffset = 0;
-    unsigned int huffmanBitOffset = 7;
 
-    /// Blocks
-    JpgBlock tempBlock;
+    /// Zigzag table
 
     unsigned char zigzagTable[64];
     createZigzagTable(zigzagTable);
@@ -198,25 +195,10 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
     /// DECOMPRESSING
 
-    while(scanDataSize-1>huffmanByteOffset){
-
-        for(auto &component : components){
-            
-            for(int i = 0; i<component.verticalSampling*component.horizontalSampling; ++i){
-
-                if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, 
-                    dcHuffmanTrees[component.huffmanTableDC], acHuffmanTrees[component.huffmanTableAC], 
-                    zigzagTable, tempBlock)){
-                    return -1;
-                }
-
-                component.blocks.push_back(tempBlock);
-
-                std::memset(&tempBlock, 0, sizeof(JpgBlock));
-            }
-        }
+    if(decompressBaslineJpg(scanData, scanDataSize, components, zigzagTable, 
+                            dcHuffmanTrees, acHuffmanTrees)){
+        return -1;
     }
-
 
     for(auto &component : components){
         reverseDifferentialEncoding(component.blocks);
