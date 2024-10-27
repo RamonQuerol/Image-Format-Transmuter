@@ -2,7 +2,31 @@
 
 #include <iostream>
 #include <cstring>
-#include <vector>
+
+
+#include "jpgComponentManagement.hpp"
+#include "fileDataManagementUtils.hpp"
+
+void extractHeaderData(std::unique_ptr<unsigned char []> & fileData, unsigned int fileDataOffset,
+                       unsigned char & bitsPerPixels, unsigned short & height, unsigned short & width,
+                       std::vector<Component> & components, int & numComponents){
+    
+    Component tempComponent;
+    
+    bitsPerPixels = fileData[fileDataOffset];
+    height = extractBigEndianUshort(fileData, fileDataOffset+1);
+    width = extractBigEndianUshort(fileData, fileDataOffset +3);
+
+    numComponents = fileData[fileDataOffset + 5];
+
+    for(int i = 0; i<numComponents; ++i){
+        tempComponent.componentID = fileData[fileDataOffset+6+i*3];
+        getComponentSamplingFactors(fileData[fileDataOffset + 7 + i*3], tempComponent);
+        tempComponent.quatizationTable = fileData[fileDataOffset + 8 + i*3];
+        
+        components.push_back(tempComponent);
+    }
+}
 
 
 int extractScanData(std::unique_ptr<unsigned char[]> & fileData,unsigned int  & fileDataOffset,

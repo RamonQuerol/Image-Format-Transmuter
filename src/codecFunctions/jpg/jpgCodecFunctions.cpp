@@ -55,6 +55,9 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     std::unique_ptr<unsigned char[]> scanData;
     unsigned int scanDataSize;
 
+    /// Marker consistancy
+    JpgEncoding imageEncoding = UNDEFINED_JPG_ENCODING;
+
     /// Image characteristics
     unsigned char bitsPerPixels;
     unsigned short height;
@@ -62,7 +65,6 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
     /// Component managing
     std::vector<Component> components;
-    Component tempComponent;
     int numComponents = 0;
     
     JpgType jpgType;
@@ -117,24 +119,27 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
             remainingBytes = remainingBytes - segmentLenght; 
             switch(segmentMarker){
                 case BASELINE_SEGMENT_MARKER:
-                    bitsPerPixels = fileData[fileDataOffset];
-                    height = extractBigEndianUshort(fileData, fileDataOffset+1);
-                    width = extractBigEndianUshort(fileData, fileDataOffset +3);
-
-                    numComponents = fileData[fileDataOffset + 5];
-
-                    for(int i = 0; i<numComponents; ++i){
-                        tempComponent.componentID = fileData[fileDataOffset+6+i*3];
-                        getComponentSamplingFactors(fileData[fileDataOffset + 7 + i*3], tempComponent);
-                        tempComponent.quatizationTable = fileData[fileDataOffset + 8 + i*3];
-                        
-                        components.push_back(tempComponent);
+                    if(imageEncoding != UNDEFINED_JPG_ENCODING){
+                        std::cerr << "ERROR: The input image has more than one encoding(baseline, progressive, etc)\n";
+                        return -1;
                     }
 
+                    extractHeaderData(fileData, fileDataOffset, bitsPerPixels, height, width,
+                                         components, numComponents);
+                    
+                    imageEncoding = BASELINE_ENCODING;
                     break;
                 case PROGRESSIVE_SEGEMENT_MARKER:
-                    std::cerr << "The program does not currently support progressive DCT-based jpeg\n";
-                    return -1;
+                    if(imageEncoding != UNDEFINED_JPG_ENCODING){
+                        std::cerr << "ERROR: The input image has more than one encoding(baseline, progressive, etc)\n";
+                        return -1;
+                    }
+
+                    extractHeaderData(fileData, fileDataOffset, bitsPerPixels, height, width,
+                                         components, numComponents);
+                    
+                    imageEncoding = PROGRESSIVE_ENCODING;
+                    break;
                 case QUANTIZATION_SEGMENT_MARKER:
                     if(segmentLenght!=67){
 
@@ -195,9 +200,19 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
     /// DECOMPRESSING
 
-    if(decompressBaslineJpg(scanData, scanDataSize, components, zigzagTable, 
-                            dcHuffmanTrees, acHuffmanTrees)){
-        return -1;
+    switch (imageEncoding){
+        case BASELINE_ENCODING:
+            if(decompressBaslineJpg(scanData, scanDataSize, components, zigzagTable, 
+                                    dcHuffmanTrees, acHuffmanTrees)){
+                return -1;
+            }
+            break;
+        case PROGRESSIVE_ENCODING:
+            std::cerr << "I have no idea how to decompress that\n";
+            return -1;
+        default:
+            std::cerr << "ERROR: The program could not find the encoding segment of the image\n";
+            return -1;
     }
 
     for(auto &component : components){
