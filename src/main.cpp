@@ -12,6 +12,7 @@
 
 #include "bmpCodecFunctions.hpp"
 #include "pngCodecFunctions.hpp"
+#include "jpgCodecFunctions.hpp"
 
 
 int main(int argc, char* argv[]){
@@ -62,6 +63,9 @@ int main(int argc, char* argv[]){
             break;
         case PNG:
             err = decodePNG(inputFile, decodedImage);
+            break;
+        case JPG:
+            err = decodeJPG(inputFile, decodedImage);
             break;
         case UNDEFINED_FORMAT:
             std::cerr << "You must define the input file format. Use --help to know more.\n";
