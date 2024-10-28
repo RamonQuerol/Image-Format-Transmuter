@@ -28,24 +28,27 @@ int getCoefficient(std::unique_ptr<unsigned char []> & scanData,
 /// Main functions
 
 
-int decompressBaslineJpg(std::unique_ptr<unsigned char []> & scanData, unsigned int scanDataSize,
-                         std::vector<Component> & components, unsigned char (& zigzagTable)[64],
-                         std::vector<JpgHuffmanTree> & dcHuffmanTrees, 
-                         std::vector<JpgHuffmanTree> & acHuffmanTrees){
+int decompressBaslineJpg(DataInfo & dataInfo, unsigned char (& zigzagTable)[64],
+                         std::vector<Component> & components, 
+                         std::vector<JpgHuffmanTree> & dcHuffmanTrees){
 
     JpgBlock tempBlock;
     unsigned int huffmanByteOffset = 0;
     unsigned int huffmanBitOffset = 7;
 
+    for(int i = 0; i < components.size(); ++i){
+        components[i].huffmanTableDC = dataInfo.component[i].huffmanTableDC;
+        components[i].huffmanTableAC = dataInfo.component[i].huffmanTableAC;
+    }
 
-    while(scanDataSize-1>huffmanByteOffset){
+    while(dataInfo.scanDataSize-1>huffmanByteOffset){
 
         for(auto &component : components){
             
             for(int i = 0; i<component.verticalSampling*component.horizontalSampling; ++i){
 
-                if(decompressBaselineBlock(scanData, huffmanByteOffset, huffmanBitOffset, 
-                    dcHuffmanTrees[component.huffmanTableDC], acHuffmanTrees[component.huffmanTableAC], 
+                if(decompressBaselineBlock(dataInfo.scanData, huffmanByteOffset, huffmanBitOffset, 
+                    dcHuffmanTrees[component.huffmanTableDC], dataInfo.acTrees[component.huffmanTableAC], 
                     zigzagTable, tempBlock)){
                     return -1;
                 }

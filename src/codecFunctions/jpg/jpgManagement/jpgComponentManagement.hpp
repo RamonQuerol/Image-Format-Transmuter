@@ -1,9 +1,10 @@
 #include <vector>
+#include <memory>
 
 #include "jpgStructs.hpp"
 #include "jpgEnums.hpp"
 
-void assignHuffTablesToComponent(unsigned char huffTableByte, Component & component);
+ComponentDataInfo createComponentInfo(std::unique_ptr<unsigned char []> & fileData, int offset);
 
 
 void getComponentSamplingFactors(unsigned char samplingByte, Component & component);

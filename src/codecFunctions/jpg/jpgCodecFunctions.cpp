@@ -52,8 +52,8 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     unsigned short segmentLenght;
     bool reachedEndSegment = false;
 
-    std::unique_ptr<unsigned char[]> scanData;
-    unsigned int scanDataSize;
+    std::vector<std::unique_ptr<DataInfo>> dataInfoBlocks;
+    std::unique_ptr<DataInfo> tempDataInfo = std::make_unique<DataInfo>();
 
     /// Marker consistancy
     JpgEncoding imageEncoding = UNDEFINED_JPG_ENCODING;
@@ -160,27 +160,38 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
                 case HUFFMAN_SEGMENT_MARKER:
                     if(fileData[fileDataOffset]/16){ // 1 means that is an AC huffman table
-                        acHuffmanTrees.push_back(JpgHuffmanTree(fileData, fileDataOffset, segmentLenght, err));
+                        tempDataInfo->acTrees.push_back(JpgHuffmanTree(fileData, fileDataOffset, segmentLenght, err));
                     }else{ // 0 means that is a DC huffman table
                         dcHuffmanTrees.push_back(JpgHuffmanTree(fileData, fileDataOffset, segmentLenght, err));
                     }
                     break;
                 case SCAN_SEGMENT_MARKER:
 
-                    for(int i = 0; i<numComponents; ++i){
-                        assignHuffTablesToComponent(fileData[fileDataOffset+2+i*2],components[i]);
+                    tempDataInfo->numComponents = fileData[fileDataOffset];
+                    ++fileDataOffset;
+                    for(int i = 0; i<tempDataInfo->numComponents; ++i, fileDataOffset += 2){
+                        tempDataInfo->component.push_back(createComponentInfo(fileData, fileDataOffset));
                     }
-                    
-                    fileDataOffset += segmentLenght-2;
+
+                    tempDataInfo->startSpectral = fileData[fileDataOffset];
+                    tempDataInfo->endSpectral = fileData[fileDataOffset+1];
+
+                    tempDataInfo->currentRefinementPos = fileData[fileDataOffset+3]/16;
+                    tempDataInfo->newRefinementPos = fileData[fileDataOffset+3]%3;
+
+                    fileDataOffset += 3;
 
                     // Note: The function will change fileDataOffset amd remainingBytes acording to
                     // the size of the scan data inside the file (which is a bit more that scanDataSize)
-                    scanDataSize = extractScanData(fileData, fileDataOffset, remainingBytes, scanData);
+                    tempDataInfo->scanDataSize = extractScanData(fileData, fileDataOffset, remainingBytes, tempDataInfo->scanData);
 
-                    if(scanDataSize < 0){
+                    if(tempDataInfo->scanDataSize < 0){
                         return -1;
                     }
-                    
+
+                    dataInfoBlocks.push_back(move(tempDataInfo));
+                    tempDataInfo = std::make_unique<DataInfo>();                    
+
                     continue;
 
                 default:
@@ -202,8 +213,7 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
     switch (imageEncoding){
         case BASELINE_ENCODING:
-            if(decompressBaslineJpg(scanData, scanDataSize, components, zigzagTable, 
-                                    dcHuffmanTrees, acHuffmanTrees)){
+            if(decompressBaslineJpg(*(dataInfoBlocks[0]), zigzagTable, components, dcHuffmanTrees)){
                 return -1;
             }
             break;

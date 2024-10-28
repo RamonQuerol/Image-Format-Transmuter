@@ -4,7 +4,6 @@
 #include "jpgHuffmanTree.hpp"
 
 
-int decompressBaslineJpg(std::unique_ptr<unsigned char []> & scanData, unsigned int scanDataSize,
-                         std::vector<Component> & components, unsigned char (& zigzagTable)[64],
-                         std::vector<JpgHuffmanTree> & dcHuffmanTrees, 
-                         std::vector<JpgHuffmanTree> & acHuffmanTrees);
+int decompressBaslineJpg(DataInfo & dataInfo, unsigned char (& zigzagTable)[64],
+                         std::vector<Component> & components, 
+                         std::vector<JpgHuffmanTree> & dcHuffmanTrees);
