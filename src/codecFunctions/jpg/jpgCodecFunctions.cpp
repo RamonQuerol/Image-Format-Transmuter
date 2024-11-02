@@ -176,8 +176,8 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
                     tempDataInfo->startSpectral = fileData[fileDataOffset];
                     tempDataInfo->endSpectral = fileData[fileDataOffset+1];
 
-                    tempDataInfo->currentRefinementPos = fileData[fileDataOffset+3]/16;
-                    tempDataInfo->newRefinementPos = fileData[fileDataOffset+3]%3;
+                    tempDataInfo->currentRefinementPos = fileData[fileDataOffset+2]/16;
+                    tempDataInfo->newRefinementPos = fileData[fileDataOffset+2]%16;
 
                     fileDataOffset += 3;
 
@@ -218,16 +218,16 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
             }
             break;
         case PROGRESSIVE_ENCODING:
-            std::cerr << "I have no idea how to decompress that\n";
-            return -1;
+            if(decompressProgressiveJpg(dataInfoBlocks, height, width, zigzagTable, components, dcHuffmanTrees)){
+                return -1;
+            }
+            break;
         default:
             std::cerr << "ERROR: The program could not find the encoding segment of the image\n";
             return -1;
     }
 
-    for(auto &component : components){
-        reverseDifferentialEncoding(component.blocks);
-    }
+    
 
     /// At this point every Block its independent of every other block in the image
 
