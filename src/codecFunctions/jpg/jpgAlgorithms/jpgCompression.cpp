@@ -16,12 +16,15 @@ int decompressBaselineBlock(std::unique_ptr<unsigned char []> & scanData,
                             unsigned char (& zigzagTable)[64], JpgBlock & outputBlock);
 
 
-/// Progressive dataInfo function prototypes
+/// Progressive first dataInfo function prototypes
 
 int getFirstProgressiveDCs(DataInfo & dataInfo, std::vector<Component> & components,
                            unsigned short blockHeight, unsigned short blockWidth,
-                           std::vector<JpgHuffmanTree> dcHuffmanTrees);
+                           std::vector<JpgHuffmanTree> & dcHuffmanTrees);
 
+
+int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
+                           JpgHuffmanTree & acHuffmanTree, unsigned char (& zigzagTable)[64]);
 
 /// Refinement function prototypes
 
@@ -37,6 +40,8 @@ int getCoefficient(std::unique_ptr<unsigned char []> & scanData,
                    unsigned int & byteOffset, unsigned int & bitOffset, unsigned char coeffLenght);
 
 
+int getExtraSkips(std::unique_ptr<unsigned char []> & scanData, 
+                       unsigned int & byteOffset, unsigned int & bitOffset, unsigned char numOfZeros);
 
 /// Main functions
 
@@ -77,7 +82,7 @@ int decompressBaslineJpg(DataInfo & dataInfo, unsigned char (& zigzagTable)[64],
     for(auto &component : components){
         reverseDifferentialEncoding(component.blocks);
     }
-    
+
     return 0;
 
 }
@@ -99,9 +104,9 @@ int decompressProgressiveJpg(std::vector<std::unique_ptr<DataInfo>> & dataInfoBl
 
     for(auto &dataInfo : dataInfoBlocks){
 
-        if(dataInfo->endSpectral == 0){ /// DC Block
+        if(dataInfo->endSpectral == 0){ /// DC DataInfo
 
-            if(dataInfo->currentRefinementPos == 0){
+            if(dataInfo->currentRefinementPos == 0){ // First DC DataInfo
                 err = getFirstProgressiveDCs(*dataInfo, components, blockHeight, blockWidth, dcHuffmanTrees);
 
                 
@@ -111,13 +116,20 @@ int decompressProgressiveJpg(std::vector<std::unique_ptr<DataInfo>> & dataInfoBl
                     reverseDifferentialEncoding(component.blocks);
                 }
 
-            }else{
+            }else{ // Refinement DC DataInfo
                 err = applyRefinementToDC(*dataInfo, components, blockHeight, blockWidth);
             }
 
-        }else{ /// AC Block
+        }else{ /// AC DataInfo
 
             if(dataInfo->currentRefinementPos == 0){
+                
+                for(auto &component : components){
+                    component.blocks.resize(blockHeight*blockWidth*component.verticalSampling*component.horizontalSampling);
+                }
+
+                err = getFirstProgressiveACs(*dataInfo, components[dataInfo->component[0].componentID],
+                    dataInfo->acTrees[0], zigzagTable);
 
             }else{
 
@@ -196,11 +208,11 @@ int decompressBaselineBlock(std::unique_ptr<unsigned char []> & scanData,
     return err;
 }
 
-/// Progressive dataInfo functions
+/// Progressive first dataInfo  functions
 
 int getFirstProgressiveDCs(DataInfo & dataInfo, std::vector<Component> & components,
                            unsigned short blockHeight, unsigned short blockWidth,
-                           std::vector<JpgHuffmanTree> dcHuffmanTrees){
+                           std::vector<JpgHuffmanTree> & dcHuffmanTrees){
 
     int err = 0;
     int coeff;
@@ -250,6 +262,65 @@ int getFirstProgressiveDCs(DataInfo & dataInfo, std::vector<Component> & compone
     return 0;
 }
 
+
+int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
+                           JpgHuffmanTree & acHuffmanTree, unsigned char (& zigzagTable)[64]){
+
+    int err = 0;
+    int coeff;
+    unsigned char compressedAC;
+    unsigned char numOfZeros;
+    unsigned char coeffLenght;
+    unsigned int byteOffset = 0;
+    unsigned int bitOffset = 7;
+    
+
+    for(int i = 0; i<component.blocks.size() && !err; ++i){
+
+
+        for(int j = dataInfo.startSpectral; j<=dataInfo.endSpectral && !err; ++j){
+
+
+            compressedAC = acHuffmanTree.decodeChar(dataInfo.scanData, byteOffset, bitOffset, err);
+
+            coeffLenght = compressedAC%16;
+            numOfZeros = compressedAC/16;
+            
+
+            if(coeffLenght == 0 && numOfZeros != 15){
+                int skips = (1 << numOfZeros)-1;
+                skips += getExtraSkips(dataInfo.scanData, byteOffset, bitOffset, numOfZeros);       
+                
+                i += skips;
+                break;
+            }
+            
+            j += numOfZeros;
+
+            
+
+            if(j>dataInfo.endSpectral){
+                std::cerr << "Error: During decompression the data of one of the blocks exceeded the endSpectral of " << dataInfo.endSpectral-0 
+                        << " in the data block covering the componet with id " << component.componentID-0 << " \n";
+                return -1;
+            }
+
+            if(coeffLenght>10){
+                std::cerr << "Error: " << coeffLenght << " its not a valid lenght for a AC value\n";
+                return -1;
+            }
+
+            if(coeffLenght != 0){
+                coeff = getCoefficient(dataInfo.scanData, byteOffset, bitOffset, coeffLenght);
+                component.blocks[i].blockData[zigzagTable[j]] = coeff << dataInfo.newRefinementPos;
+            }
+        }
+
+    }
+    
+
+    return err;
+}
 
 /// Refinement functions
 
@@ -314,6 +385,30 @@ int getCoefficient(std::unique_ptr<unsigned char []> & scanData,
             currentByte = scanData[byteOffset];
         }
     }    
+
+    return coeff;
+}
+
+
+int getExtraSkips(std::unique_ptr<unsigned char []> & scanData, 
+                       unsigned int & byteOffset, unsigned int & bitOffset, unsigned char numOfZeros){
+
+    int coeff = 0;
+    unsigned char currentByte = scanData[byteOffset];
+    unsigned char bitMultiplier = 1 << bitOffset;  
+
+
+    for(int i = numOfZeros-1 ; i>=0; --i){
+        
+        if(currentByte & bitMultiplier){
+            coeff += 1 << i;
+        }
+
+        if(moveBitOffset(byteOffset, bitOffset, bitMultiplier) && i>0){
+            currentByte = scanData[byteOffset];
+        }
+    }    
+    
 
     return coeff;
 }

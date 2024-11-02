@@ -20,7 +20,7 @@ void extractHeaderData(std::unique_ptr<unsigned char []> & fileData, unsigned in
     numComponents = fileData[fileDataOffset + 5];
 
     for(int i = 0; i<numComponents; ++i){
-        tempComponent.componentID = fileData[fileDataOffset+6+i*3];
+        tempComponent.componentID = fileData[fileDataOffset+6+i*3]-1;
         getComponentSamplingFactors(fileData[fileDataOffset + 7 + i*3], tempComponent);
         tempComponent.quatizationTable = fileData[fileDataOffset + 8 + i*3];
         

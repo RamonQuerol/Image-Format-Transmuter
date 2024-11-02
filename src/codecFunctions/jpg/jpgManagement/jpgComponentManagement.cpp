@@ -7,7 +7,7 @@ ComponentDataInfo createComponentInfo(std::unique_ptr<unsigned char []> & fileDa
     ComponentDataInfo componentInfo;
     unsigned char huffTableByte;
 
-    componentInfo.componentID = fileData[offset];
+    componentInfo.componentID = fileData[offset]-1;
     
     huffTableByte = fileData[offset+1];
     componentInfo.huffmanTableDC = huffTableByte/16;
