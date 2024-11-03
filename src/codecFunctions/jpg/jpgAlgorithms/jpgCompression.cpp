@@ -31,17 +31,30 @@ int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
 int applyRefinementToDC(DataInfo & dataInfo, std::vector<Component> & components,
                         unsigned short blockHeight, unsigned short blockWidth);
 
+int applyRefinementToACs(DataInfo & dataInfo, Component & component,
+                         JpgHuffmanTree & acHuffmanTree, unsigned char (& zigzagTable)[64]);
+
 
 /// Support function prototypes
 
 
-// Gets the coefficient store in the next coeffLenght bits in scanData and moves the offsets
+// Gets the coefficient store in the next coeffLength bits in scanData and moves the offsets
 int getCoefficient(std::unique_ptr<unsigned char []> & scanData, 
-                   unsigned int & byteOffset, unsigned int & bitOffset, unsigned char coeffLenght);
+                   unsigned int & byteOffset, unsigned int & bitOffset, unsigned char coeffLength);
 
 
 int getExtraSkips(std::unique_ptr<unsigned char []> & scanData, 
                        unsigned int & byteOffset, unsigned int & bitOffset, unsigned char numOfZeros);
+
+
+void skipRefinementZeros(DataInfo & dataInfo, int & blockPos, unsigned char numOfZeros,
+                         unsigned int & byteOffset, unsigned int & bitOffset, int refinementPositive,
+                         unsigned char (& zigzagTable)[64], JpgBlock & block);
+
+
+void updateBlockUntilEnd(DataInfo & dataInfo, unsigned char start, int refinementPositive,
+                         unsigned int & byteOffset, unsigned int & bitOffset, 
+                         unsigned char (& zigzagTable)[64], JpgBlock & block);
 
 /// Main functions
 
@@ -132,7 +145,7 @@ int decompressProgressiveJpg(std::vector<std::unique_ptr<DataInfo>> & dataInfoBl
                     dataInfo->acTrees[0], zigzagTable);
 
             }else{
-
+                err = applyRefinementToACs(*dataInfo, components[dataInfo->component[0].componentID], dataInfo->acTrees[0], zigzagTable);
             }
 
         }
@@ -157,19 +170,19 @@ int decompressBaselineBlock(std::unique_ptr<unsigned char []> & scanData,
     int err = 0;
     unsigned char compressedAC;
     unsigned char numOfZeros;
-    unsigned char coeffLenght;
+    unsigned char coeffLength;
 
     /// DC coefficient
 
-    coeffLenght = dcHuffmanTree.decodeChar(scanData, byteOffset, bitOffset, err);
+    coeffLength = dcHuffmanTree.decodeChar(scanData, byteOffset, bitOffset, err);
 
-    if(coeffLenght>11){
-        std::cerr << "Error: " << coeffLenght << " its not a valid lenght for a DC value\n";
+    if(coeffLength>11){
+        std::cerr << "Error: " << coeffLength << " its not a valid length for a DC value\n";
         return -1;
     }
 
-    if(coeffLenght!=0){ // If its 0, the result should be 0, which is already the value outputBlock.blockData[0] has
-        outputBlock.blockData[0] = getCoefficient(scanData, byteOffset, bitOffset, coeffLenght);
+    if(coeffLength!=0){ // If its 0, the result should be 0, which is already the value outputBlock.blockData[0] has
+        outputBlock.blockData[0] = getCoefficient(scanData, byteOffset, bitOffset, coeffLength);
     }
 
 
@@ -188,10 +201,10 @@ int decompressBaselineBlock(std::unique_ptr<unsigned char []> & scanData,
             return -1;
         }
 
-        coeffLenght = compressedAC%16;
+        coeffLength = compressedAC%16;
 
-        if(coeffLenght>10){
-            std::cerr << "Error: " << coeffLenght << " its not a valid lenght for a AC value\n";
+        if(coeffLength>10){
+            std::cerr << "Error: " << coeffLength << " its not a valid length for a AC value\n";
             return -1;
         }
 
@@ -200,8 +213,8 @@ int decompressBaselineBlock(std::unique_ptr<unsigned char []> & scanData,
             break;
         }
 
-        if(coeffLenght != 0){
-            outputBlock.blockData[zigzagTable[i]] = getCoefficient(scanData, byteOffset, bitOffset, coeffLenght);
+        if(coeffLength != 0){
+            outputBlock.blockData[zigzagTable[i]] = getCoefficient(scanData, byteOffset, bitOffset, coeffLength);
         }
     }
 
@@ -216,7 +229,7 @@ int getFirstProgressiveDCs(DataInfo & dataInfo, std::vector<Component> & compone
 
     int err = 0;
     int coeff;
-    unsigned char coeffLenght;
+    unsigned char coeffLength;
     unsigned int byteOffset = 0;
     unsigned int bitOffset = 7;
     unsigned int subSamplingMult = 3;
@@ -239,20 +252,20 @@ int getFirstProgressiveDCs(DataInfo & dataInfo, std::vector<Component> & compone
             subSamplingMult = component.verticalSampling*component.horizontalSampling;
             for(int j = 0; j<subSamplingMult; ++j){
                 
-                coeffLenght = dcHuffmanTrees[component.huffmanTableDC].decodeChar(dataInfo.scanData, byteOffset, bitOffset, err);
+                coeffLength = dcHuffmanTrees[component.huffmanTableDC].decodeChar(dataInfo.scanData, byteOffset, bitOffset, err);
 
                 if(err){
                     return -1;
                 }
 
-                if(coeffLenght>11){
-                    std::cerr << "Error: " << coeffLenght << " its not a valid lenght for a DC value\n";
+                if(coeffLength>11){
+                    std::cerr << "Error: " << coeffLength << " its not a valid length for a DC value\n";
                     return -1;
                 }
 
 
-                if(coeffLenght!=0){ // If its 0, the result should be 0, which is already the value outputBlock.blockData[0] has
-                    coeff = getCoefficient(dataInfo.scanData, byteOffset, bitOffset, coeffLenght);
+                if(coeffLength!=0){ // If its 0, the result should be 0, which is already the value outputBlock.blockData[0] has
+                    coeff = getCoefficient(dataInfo.scanData, byteOffset, bitOffset, coeffLength);
                     component.blocks[i*subSamplingMult + j].blockData[0] =  coeff << dataInfo.newRefinementPos;
                 }
             }
@@ -270,7 +283,7 @@ int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
     int coeff;
     unsigned char compressedAC;
     unsigned char numOfZeros;
-    unsigned char coeffLenght;
+    unsigned char coeffLength;
     unsigned int byteOffset = 0;
     unsigned int bitOffset = 7;
     
@@ -283,15 +296,13 @@ int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
 
             compressedAC = acHuffmanTree.decodeChar(dataInfo.scanData, byteOffset, bitOffset, err);
 
-            coeffLenght = compressedAC%16;
+            coeffLength = compressedAC%16;
             numOfZeros = compressedAC/16;
             
 
-            if(coeffLenght == 0 && numOfZeros != 15){
-                int skips = (1 << numOfZeros)-1;
-                skips += getExtraSkips(dataInfo.scanData, byteOffset, bitOffset, numOfZeros);       
-                
-                i += skips;
+            if(coeffLength == 0 && numOfZeros != 15){
+                i += (1 << numOfZeros)-1;
+                i += getExtraSkips(dataInfo.scanData, byteOffset, bitOffset, numOfZeros);       
                 break;
             }
             
@@ -305,13 +316,13 @@ int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
                 return -1;
             }
 
-            if(coeffLenght>10){
-                std::cerr << "Error: " << coeffLenght << " its not a valid lenght for a AC value\n";
+            if(coeffLength>10){
+                std::cerr << "Error: " << coeffLength << " its not a valid length for a AC value\n";
                 return -1;
             }
 
-            if(coeffLenght != 0){
-                coeff = getCoefficient(dataInfo.scanData, byteOffset, bitOffset, coeffLenght);
+            if(coeffLength != 0){
+                coeff = getCoefficient(dataInfo.scanData, byteOffset, bitOffset, coeffLength);
                 component.blocks[i].blockData[zigzagTable[j]] = coeff << dataInfo.newRefinementPos;
             }
         }
@@ -356,32 +367,111 @@ int applyRefinementToDC(DataInfo & dataInfo, std::vector<Component> & components
 }
 
 
+int applyRefinementToACs(DataInfo & dataInfo, Component & component,
+                         JpgHuffmanTree & acHuffmanTree, unsigned char (& zigzagTable)[64]){
+
+    int err = 0;
+    int coeff;
+    int skips = 0;
+    unsigned char compressedAC;
+    unsigned char numOfZeros;
+    unsigned char coeffLength;
+    unsigned int byteOffset = 0;
+    unsigned int bitOffset = 7;
+    int refinementPositive = 1 << dataInfo.newRefinementPos;
+
+    
+
+    for(int i = 0; i<component.blocks.size() && !err; ++i){
+
+        for(int j = dataInfo.startSpectral; j<=dataInfo.endSpectral && !err; ++j){
+
+            
+            compressedAC = acHuffmanTree.decodeChar(dataInfo.scanData, byteOffset, bitOffset, err);
+
+            coeffLength = compressedAC%16;
+            numOfZeros = compressedAC/16;
+            
+
+            if(coeffLength > 1){
+                std::cerr << "ERROR: During the refinement of AC values the program found a coefficient length different than 0 or 1\n";
+                return -1;
+            }
+
+            if(coeffLength == 0 && numOfZeros != 15){
+                skips += (1 << numOfZeros)-1;
+                skips += getExtraSkips(dataInfo.scanData, byteOffset, bitOffset, numOfZeros);             
+
+                updateBlockUntilEnd(dataInfo, j, refinementPositive, 
+                    byteOffset, bitOffset, zigzagTable, component.blocks[i]);
+                break;
+            }
+
+            if(coeffLength==0){// For the case of F0
+                skipRefinementZeros(dataInfo, j, 15, byteOffset, bitOffset,
+                        refinementPositive, zigzagTable, component.blocks[i]);
+                continue;
+            }
+            
+
+            
+            if(j>dataInfo.endSpectral){
+                std::cerr << "Error: During decompression the data of one of the blocks exceeded the endSpectral of " << dataInfo.endSpectral-0 
+                        << " in the data block covering the componet with id " << component.componentID-0 << " \n";
+                return -1;
+            }
+
+
+            coeff = getCoefficient(dataInfo.scanData, byteOffset, bitOffset, coeffLength);
+
+
+            skipRefinementZeros(dataInfo, j, numOfZeros, byteOffset, bitOffset,
+                        refinementPositive, zigzagTable, component.blocks[i]);
+
+            component.blocks[i].blockData[zigzagTable[j]] = coeff << dataInfo.newRefinementPos;
+        }
+
+        
+
+        for(; skips > 0; --skips, ++i){
+            updateBlockUntilEnd(dataInfo, dataInfo.startSpectral, refinementPositive,
+                byteOffset, bitOffset, zigzagTable, component.blocks[i+1]);
+        }
+
+    }
+    
+
+    return err;
+
+}
+
+
 /// Support functions
 
 int getCoefficient(std::unique_ptr<unsigned char []> & scanData, 
-                       unsigned int & byteOffset, unsigned int & bitOffset, unsigned char coeffLenght){
+                       unsigned int & byteOffset, unsigned int & bitOffset, unsigned char coeffLength){
     
     int coeff;
     unsigned char currentByte = scanData[byteOffset];
     unsigned char bitMultiplier = 1 << bitOffset;    
     
     if(currentByte & bitMultiplier){
-        coeff = 1 << (coeffLenght-1);
+        coeff = 1 << (coeffLength-1);
     }else{
-        coeff = -1*(1 << coeffLenght) + 1;
+        coeff = -1*(1 << coeffLength) + 1;
     }
 
-    if(moveBitOffset(byteOffset, bitOffset, bitMultiplier)){
+    if(moveBitOffset(byteOffset, bitOffset, bitMultiplier) && coeffLength>1){
         currentByte = scanData[byteOffset];
     }
 
-    for(int i = coeffLenght-2 ; i>=0; --i){
+    for(int i = coeffLength-2 ; i>=0; --i){
         
         if(currentByte & bitMultiplier){
             coeff += 1 << i;
         }
 
-        if(moveBitOffset(byteOffset, bitOffset, bitMultiplier)){
+        if(moveBitOffset(byteOffset, bitOffset, bitMultiplier) && i>0){
             currentByte = scanData[byteOffset];
         }
     }    
@@ -411,4 +501,82 @@ int getExtraSkips(std::unique_ptr<unsigned char []> & scanData,
     
 
     return coeff;
+}
+
+
+void skipRefinementZeros(DataInfo & dataInfo, int & blockPos, unsigned char numOfZeros,
+                         unsigned int & byteOffset, unsigned int & bitOffset, int refinementPositive,
+                         unsigned char (& zigzagTable)[64], JpgBlock & block){
+
+    int bitsRead = 0;
+    int remainingZeros = numOfZeros;
+    unsigned char currentByte = dataInfo.scanData[byteOffset];
+    unsigned char bitMultiplier = 1 << bitOffset;
+
+
+    while(blockPos < dataInfo.endSpectral){
+
+
+        if(block.blockData[zigzagTable[blockPos]]==0){
+            if(remainingZeros <= 0){
+                break;
+            }
+            ++blockPos;
+            --remainingZeros;
+            continue;
+        }
+
+        if(currentByte & bitMultiplier){// We read a 1
+
+            if(block.blockData[zigzagTable[blockPos]]>0){
+                block.blockData[zigzagTable[blockPos]] += refinementPositive;
+            }else{
+                block.blockData[zigzagTable[blockPos]] -= refinementPositive;
+            }         
+
+        }
+
+        ++blockPos;
+
+        if(moveBitOffset(byteOffset, bitOffset, bitMultiplier) && blockPos<dataInfo.endSpectral){
+            currentByte = dataInfo.scanData[byteOffset];
+        }
+
+    }
+
+}
+
+
+void updateBlockUntilEnd(DataInfo & dataInfo, unsigned char start, int refinementPositive,
+                         unsigned int & byteOffset, unsigned int & bitOffset, 
+                         unsigned char (& zigzagTable)[64], JpgBlock & block){
+
+    unsigned char currentByte = dataInfo.scanData[byteOffset];
+    unsigned char bitMultiplier = 1 << bitOffset;  
+
+
+    for(int i = start; i<=dataInfo.endSpectral; ++i){
+
+
+        /// We only read bits if if the cell has a value already
+        if(block.blockData[zigzagTable[i]]!=0){
+
+
+            if(currentByte & bitMultiplier){// We read a 1
+
+
+                if(block.blockData[zigzagTable[i]]>0){
+                    block.blockData[zigzagTable[i]] += refinementPositive;
+                }else{
+                    block.blockData[zigzagTable[i]] -= refinementPositive;
+                }         
+
+            }
+
+            if(moveBitOffset(byteOffset, bitOffset, bitMultiplier) && i+1<dataInfo.endSpectral){
+                currentByte = dataInfo.scanData[byteOffset];
+            }
+
+        }
+    }
 }
