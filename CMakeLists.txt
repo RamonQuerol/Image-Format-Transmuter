@@ -6,7 +6,7 @@ project(imageTransmuter)
 find_package(ZLIB REQUIRED)
 
 #For debugging
-#set(CMAKE_CXX_FLAGS "-fsanitize=address")
+set(CMAKE_CXX_FLAGS "-fsanitize=address")
 
 # 
 add_executable(${PROJECT_NAME} 

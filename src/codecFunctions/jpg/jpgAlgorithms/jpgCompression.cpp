@@ -46,20 +46,22 @@ int applyRefinementToACs(DataInfo & dataInfo, Component & component,
 int getCoefficient(std::unique_ptr<unsigned char []> & scanData, 
                    unsigned int & byteOffset, unsigned int & bitOffset, unsigned char coeffLength);
 
-
+// Reads the next numOfZeros bits of scanData to get remaining skips
 int getExtraSkips(std::unique_ptr<unsigned char []> & scanData, 
                        unsigned int & byteOffset, unsigned int & bitOffset, unsigned char numOfZeros);
 
-
+// Navigates the block until it has found numOfZeros 0 in the block since blockPos. Adds 1bit of refinement to the positions that are not 0.
 void skipRefinementZeros(DataInfo & dataInfo, int & blockPos, unsigned char numOfZeros,
                          unsigned int & byteOffset, unsigned int & bitOffset, int refinementPositive,
                          unsigned char (& zigzagTable)[64], JpgBlock & block);
 
-
+// Navigates the block until the end of it and adds 1bit of refinement to the positions that are not 0.
 void updateBlockUntilEnd(DataInfo & dataInfo, unsigned char start, int refinementPositive,
                          unsigned int & byteOffset, unsigned int & bitOffset, 
                          unsigned char (& zigzagTable)[64], JpgBlock & block);
 
+// Checks if all the remaining positions and block since block[currentBlockY*realWidth + currentBlockX].blockdata[firstBlockStart] are 0
+// Return 0 if they are and -1 otherwise  
 int checkIfLastBlocksHaveOnlyZeroes(DataInfo & dataInfo, unsigned char firstBlockStart,
                                     int currentBlockY, int currentBlockX,
                                     int heightToCover, int widthToCover, int realWidth,
@@ -125,10 +127,10 @@ int decompressProgressiveJpg(std::vector<std::unique_ptr<DataInfo>> & dataInfoBl
     unsigned short blockHeight = height/(8*components[0].verticalSampling) + (height%(8*components[0].verticalSampling) ? 1 : 0);
     unsigned short blockWidth = width/(8*components[0].horizontalSampling) + (width%(8*components[0].horizontalSampling) ? 1 : 0);
     
+
     for(auto &component : components){
         component.blocks.resize(blockHeight*blockWidth*component.verticalSampling*component.horizontalSampling);
     }
-
 
     for(auto &dataInfo : dataInfoBlocks){
 
@@ -152,16 +154,12 @@ int decompressProgressiveJpg(std::vector<std::unique_ptr<DataInfo>> & dataInfoBl
 
         }else{ /// AC DataInfo
             componentID = dataInfo->component[0].componentID;
-            if(dataInfo->currentRefinementPos == 0){
-                
-                for(auto &component : components){
-                    component.blocks.resize(blockHeight*blockWidth*component.verticalSampling*component.horizontalSampling);
-                }
 
+            if(dataInfo->currentRefinementPos == 0){ // First AC DataInfo
                 err = getFirstProgressiveACs(*dataInfo, components[componentID], verticalFilling && !componentID, 
                 horizontalFilling && !componentID, blockHeight, blockWidth, dataInfo->acTrees[0], zigzagTable);
 
-            }else{
+            }else{ // Refinement AC DataInfo
                 err = applyRefinementToACs(*dataInfo, components[componentID], verticalFilling && !componentID, 
                     horizontalFilling && !componentID, blockHeight, blockWidth, dataInfo->acTrees[0], zigzagTable);
             }
@@ -316,6 +314,7 @@ int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
     for(int blockY = 0; blockY<heightToCover && !err; ++blockY){
         for(int blockX = 0; blockX<widthToCover && !err; ++blockX){
 
+            // Do we have to skip the block?
             if(skips>0){
                 --skips;
                 continue;
@@ -324,7 +323,7 @@ int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
             if(component.verticalSampling>1){
                 blockPos = blockY*realWidth + blockX*2 - (blockY%2 ? realWidth-1 : 0);
                 
-                if(component.horizontalSampling>1){
+                if(component.horizontalSampling>1){// 4:2:0 subsampling
                     switch (blockPos%4){
                         case 1:
                             ++blockPos;
@@ -347,6 +346,7 @@ int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
                 numOfZeros = compressedAC/16;
                             
 
+                /// Any combination of these mean that an X amount of blocks will be skipped
                 if(coeffLength == 0 && numOfZeros != 15){
                     
                     skips += (1 << numOfZeros)-1;
@@ -444,7 +444,7 @@ int applyRefinementToACs(DataInfo & dataInfo, Component & component,
             if(component.verticalSampling>1){
                 blockPos = blockY*realWidth + blockX*2 - (blockY%2 ? realWidth-1 : 0);
                 
-                if(component.horizontalSampling>1){
+                if(component.horizontalSampling>1){// 4:2:0 subsampling
                     switch (blockPos%4){
                         case 1:
                             ++blockPos;
@@ -685,6 +685,7 @@ int checkIfLastBlocksHaveOnlyZeroes(DataInfo & dataInfo, unsigned char firstBloc
     int blockX = currentBlockX;
     int blockPos = blockY*realWidth + blockX;
 
+    // The first block may have values other than 0 before firstBlockStart
     for(int j = firstBlockStart; j<=dataInfo.endSpectral; ++j){
 
         /// We only read bits if if the cell has a value already
