@@ -24,7 +24,8 @@ int getFirstProgressiveDCs(DataInfo & dataInfo, std::vector<Component> & compone
 
 
 int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
-                           bool verticalFilling, bool horizontalFilling, int blockWidth,
+                           bool verticalFilling, bool horizontalFilling, 
+                           int blockHeight, int blockWidth,
                            JpgHuffmanTree & acHuffmanTree, unsigned char (& zigzagTable)[64]);
 
 /// Refinement function prototypes
@@ -33,7 +34,8 @@ int applyRefinementToDC(DataInfo & dataInfo, std::vector<Component> & components
                         unsigned short blockHeight, unsigned short blockWidth);
 
 int applyRefinementToACs(DataInfo & dataInfo, Component & component,
-                         bool verticalFilling, bool horizontalFilling, int blockWidth,
+                         bool verticalFilling, bool horizontalFilling, 
+                         int blockHeight, int blockWidth,
                          JpgHuffmanTree & acHuffmanTree, unsigned char (& zigzagTable)[64]);
 
 
@@ -59,8 +61,9 @@ void updateBlockUntilEnd(DataInfo & dataInfo, unsigned char start, int refinemen
                          unsigned char (& zigzagTable)[64], JpgBlock & block);
 
 int checkIfLastBlocksHaveOnlyZeroes(DataInfo & dataInfo, unsigned char firstBlockStart,
-                                    int blockOffset, int numOfBlocks, unsigned char (& zigzagTable)[64], 
-                                    std::vector<JpgBlock> & blocks);
+                                    int currentBlockY, int currentBlockX,
+                                    int heightToCover, int widthToCover, int realWidth,
+                                    unsigned char (& zigzagTable)[64], std::vector<JpgBlock> & blocks);
 
 /// Main functions
 
@@ -132,7 +135,7 @@ int decompressProgressiveJpg(std::vector<std::unique_ptr<DataInfo>> & dataInfoBl
         if(dataInfo->endSpectral == 0){ /// DC DataInfo
 
             if(dataInfo->currentRefinementPos == 0){ // First DC DataInfo
-                std::cout << "DC First " << dataInfo->startSpectral-0 << " " << dataInfo->endSpectral-0 << " " << dataInfo->newRefinementPos-0 << "\n";
+                
                 err = getFirstProgressiveDCs(*dataInfo, components, blockHeight, blockWidth, dcHuffmanTrees);
 
                 
@@ -143,7 +146,6 @@ int decompressProgressiveJpg(std::vector<std::unique_ptr<DataInfo>> & dataInfoBl
                 }
 
             }else{ // Refinement DC DataInfo
-                std::cout << "DC Refinement " << dataInfo->startSpectral-0 << " " << dataInfo->endSpectral-0 << " " << dataInfo->newRefinementPos-0 << "\n";
 
                 err = applyRefinementToDC(*dataInfo, components, blockHeight, blockWidth);
             }
@@ -156,16 +158,12 @@ int decompressProgressiveJpg(std::vector<std::unique_ptr<DataInfo>> & dataInfoBl
                     component.blocks.resize(blockHeight*blockWidth*component.verticalSampling*component.horizontalSampling);
                 }
 
-                std::cout << "AC First " << dataInfo->startSpectral-0 << " " << dataInfo->endSpectral-0 << " " << dataInfo->newRefinementPos-0 << " " << dataInfo->component[0].componentID << "\n";
-
-
                 err = getFirstProgressiveACs(*dataInfo, components[componentID], verticalFilling && !componentID, 
-                horizontalFilling && !componentID, blockWidth, dataInfo->acTrees[0], zigzagTable);
+                horizontalFilling && !componentID, blockHeight, blockWidth, dataInfo->acTrees[0], zigzagTable);
 
             }else{
-                std::cout << "AC Refinement " << dataInfo->startSpectral-0 << " " << dataInfo->endSpectral-0 << " " << dataInfo->newRefinementPos-0 << " " << dataInfo->component[0].componentID << "\n";
                 err = applyRefinementToACs(*dataInfo, components[componentID], verticalFilling && !componentID, 
-                    horizontalFilling && !componentID, blockWidth, dataInfo->acTrees[0], zigzagTable);
+                    horizontalFilling && !componentID, blockHeight, blockWidth, dataInfo->acTrees[0], zigzagTable);
             }
 
         }
@@ -296,80 +294,95 @@ int getFirstProgressiveDCs(DataInfo & dataInfo, std::vector<Component> & compone
 
 
 int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
-                           bool verticalFilling, bool horizontalFilling, int blockWidth,
+                           bool verticalFilling, bool horizontalFilling, 
+                           int blockHeight, int blockWidth,
                            JpgHuffmanTree & acHuffmanTree, unsigned char (& zigzagTable)[64]){
 
     int err = 0;
     int coeff;
+    int skips = 0;
+    int blockPos;
     unsigned char compressedAC;
     unsigned char numOfZeros;
     unsigned char coeffLength;
     unsigned int byteOffset = 0;
     unsigned int bitOffset = 7;
-    
-    int blocksToCover = component.blocks.size() - (verticalFilling ? blockWidth*component.horizontalSampling : 0);
 
 
-    for(int i = 0; i<blocksToCover && !err; ++i){
+    int realWidth = blockWidth*component.horizontalSampling;
+    int heightToCover = blockHeight*component.verticalSampling - (verticalFilling ? 1 : 0);
+    int widthToCover = blockWidth*component.horizontalSampling - (horizontalFilling ? 1 : 0);
 
-        if(horizontalFilling && !(i%(blockWidth*2)) && i){
-            continue;
-        }
-        
+    for(int blockY = 0; blockY<heightToCover && !err; ++blockY){
+        for(int blockX = 0; blockX<widthToCover && !err; ++blockX){
 
+            if(skips>0){
+                --skips;
+                continue;
+            }
 
-        for(int j = dataInfo.startSpectral; j<=dataInfo.endSpectral && !err; ++j){
-
-
-            compressedAC = acHuffmanTree.decodeChar(dataInfo.scanData, byteOffset, bitOffset, err);
-
-            coeffLength = compressedAC%16;
-            numOfZeros = compressedAC/16;
-                        
-
-            if(coeffLength == 0 && numOfZeros != 15){
+            if(component.verticalSampling>1){
+                blockPos = blockY*realWidth + blockX*2 - (blockY%2 ? realWidth-1 : 0);
                 
-                
-
-                int skips = 0;
-                skips += (1 << numOfZeros)-1;
-                skips += getExtraSkips(dataInfo.scanData, byteOffset, bitOffset, numOfZeros);
-
-
-                if(horizontalFilling){
-                    skips += (i%(blockWidth*2)+skips)/(blockWidth*2);
+                if(component.horizontalSampling>1){
+                    switch (blockPos%4){
+                        case 1:
+                            ++blockPos;
+                            break;
+                        case 2:
+                            --blockPos;
+                    }
                 }
 
-                i += skips;
-                break;
+            }else{
+                blockPos = blockY*realWidth + blockX;
             }
             
-            j += numOfZeros;
 
-            
+            for(int j = dataInfo.startSpectral; j<=dataInfo.endSpectral && !err; ++j){
 
-            if(j>dataInfo.endSpectral){
-                std::cerr << "Error: During decompression the data of one of the blocks exceeded the endSpectral of " << dataInfo.endSpectral-0 
-                        << " in the data block covering the componet with id " << component.componentID-0 << " \n";
-                return -1;
+                compressedAC = acHuffmanTree.decodeChar(dataInfo.scanData, byteOffset, bitOffset, err);
+
+                coeffLength = compressedAC%16;
+                numOfZeros = compressedAC/16;
+                            
+
+                if(coeffLength == 0 && numOfZeros != 15){
+                    
+                    skips += (1 << numOfZeros)-1;
+                    skips += getExtraSkips(dataInfo.scanData, byteOffset, bitOffset, numOfZeros);
+
+                    break;
+                }
+                
+                j += numOfZeros;
+
+                
+
+                if(j>dataInfo.endSpectral){
+                    std::cerr << "Error: During decompression the data of one of the blocks exceeded the endSpectral of " << dataInfo.endSpectral-0 
+                            << " in the data block covering the componet with id " << component.componentID-0 << " \n";
+                    return -1;
+                }
+
+                if(coeffLength>10){
+                    std::cerr << "Error: " << coeffLength << " its not a valid length for a AC value\n";
+                    return -1;
+                }
+
+                if(coeffLength != 0){
+                    coeff = getCoefficient(dataInfo.scanData, byteOffset, bitOffset, coeffLength);
+                    component.blocks[blockPos].blockData[zigzagTable[j]] = coeff << dataInfo.newRefinementPos;
+                }
             }
 
-            if(coeffLength>10){
-                std::cerr << "Error: " << coeffLength << " its not a valid length for a AC value\n";
-                return -1;
-            }
-
-            if(coeffLength != 0){
-                coeff = getCoefficient(dataInfo.scanData, byteOffset, bitOffset, coeffLength);
-                component.blocks[i].blockData[zigzagTable[j]] = coeff << dataInfo.newRefinementPos;
-            }
         }
-
     }
-    
+
 
     return err;
 }
+
 
 /// Refinement functions
 
@@ -406,12 +419,14 @@ int applyRefinementToDC(DataInfo & dataInfo, std::vector<Component> & components
 
 
 int applyRefinementToACs(DataInfo & dataInfo, Component & component,
-                         bool verticalFilling, bool horizontalFilling, int blockWidth,
+                         bool verticalFilling, bool horizontalFilling, 
+                         int blockHeight, int blockWidth,
                          JpgHuffmanTree & acHuffmanTree, unsigned char (& zigzagTable)[64]){
 
     int err = 0;
     int coeff;
     int skips = 0;
+    int blockPos;
     unsigned char compressedAC;
     unsigned char numOfZeros;
     unsigned char coeffLength;
@@ -419,89 +434,103 @@ int applyRefinementToACs(DataInfo & dataInfo, Component & component,
     unsigned int bitOffset = 7;
     int refinementPositive = 1 << dataInfo.newRefinementPos;
 
-    int blocksToCover = component.blocks.size() - (verticalFilling ? blockWidth*component.horizontalSampling : 0);
+    int realWidth = blockWidth*component.horizontalSampling;
+    int heightToCover = blockHeight*component.verticalSampling - (verticalFilling ? 1 : 0);
+    int widthToCover = blockWidth*component.horizontalSampling - (horizontalFilling ? 1 : 0);
 
+    for(int blockY = 0; blockY<heightToCover && !err; ++blockY){
+        for(int blockX = 0; blockX<widthToCover && !err; ++blockX){
 
-    for(int i = 0; i<blocksToCover && !err; ++i){
-
-
-        if(horizontalFilling && !(i%(blockWidth*2)) && i){
-            continue;
-        }
-
-        for(int j = dataInfo.startSpectral; j<=dataInfo.endSpectral && !err; ++j){
-
-            
-            compressedAC = acHuffmanTree.decodeChar(dataInfo.scanData, byteOffset, bitOffset, err);
-
-            coeffLength = compressedAC%16;
-            numOfZeros = compressedAC/16;
-            
-
-            if(coeffLength > 1){
-                std::cerr << "ERROR: During the refinement of AC values the program found a coefficient length different than 0 or 1\n";
-                return -1;
+            if(component.verticalSampling>1){
+                blockPos = blockY*realWidth + blockX*2 - (blockY%2 ? realWidth-1 : 0);
+                
+                if(component.horizontalSampling>1){
+                    switch (blockPos%4){
+                        case 1:
+                            ++blockPos;
+                            break;
+                        case 2:
+                            --blockPos;
+                    }
+                }
+                
+            }else{
+                blockPos = blockY*realWidth + blockX;
             }
 
-            if(coeffLength == 0 && numOfZeros != 15){
-                skips += (1 << numOfZeros)-1;
-                skips += getExtraSkips(dataInfo.scanData, byteOffset, bitOffset, numOfZeros);             
+            if(skips > 0){
+                if(dataInfo.scanDataSize <= byteOffset){  
 
-                if(dataInfo.scanDataSize <= byteOffset){
-                    return checkIfLastBlocksHaveOnlyZeroes(dataInfo, j, 
-                        i, blocksToCover, zigzagTable, component.blocks);
+                    return checkIfLastBlocksHaveOnlyZeroes(dataInfo, dataInfo.startSpectral, 
+                        blockY, blockX, heightToCover, widthToCover,
+                        realWidth, zigzagTable, component.blocks);
                 }
 
-                updateBlockUntilEnd(dataInfo, j, refinementPositive, 
-                    byteOffset, bitOffset, zigzagTable, component.blocks[i]);
-                break;
-            }
 
-            if(coeffLength==0){// For the case of F0
-                skipRefinementZeros(dataInfo, j, 15, byteOffset, bitOffset,
-                        refinementPositive, zigzagTable, component.blocks[i]);
-                continue;
-            }
-            
-
-            
-            if(j>dataInfo.endSpectral){
-                std::cerr << "Error: During decompression the data of one of the blocks exceeded the endSpectral of " << dataInfo.endSpectral-0 
-                        << " in the data block covering the componet with id " << component.componentID-0 << " \n";
-                return -1;
-            }
-
-
-            coeff = getCoefficient(dataInfo.scanData, byteOffset, bitOffset, coeffLength);
-
-
-            skipRefinementZeros(dataInfo, j, numOfZeros, byteOffset, bitOffset,
-                        refinementPositive, zigzagTable, component.blocks[i]);
-
-            component.blocks[i].blockData[zigzagTable[j]] = coeff << dataInfo.newRefinementPos;
-        }
-
-
-        for(; skips > 0; ++i){
-
-
-            if(horizontalFilling && !(i%(blockWidth*2)) && i){
+                updateBlockUntilEnd(dataInfo, dataInfo.startSpectral, refinementPositive,
+                    byteOffset, bitOffset, zigzagTable, component.blocks[blockPos]);
+                
+                --skips;
                 continue;
             }
 
-            if(dataInfo.scanDataSize <= byteOffset){
-                return checkIfLastBlocksHaveOnlyZeroes(dataInfo, dataInfo.startSpectral, 
-                    i, blocksToCover, zigzagTable, component.blocks);
+            for(int j = dataInfo.startSpectral; j<=dataInfo.endSpectral && !err; ++j){
+
+                
+                compressedAC = acHuffmanTree.decodeChar(dataInfo.scanData, byteOffset, bitOffset, err);
+
+                coeffLength = compressedAC%16;
+                numOfZeros = compressedAC/16;
+
+
+                if(coeffLength > 1){
+                    std::cerr << "ERROR: During the refinement of AC values the program found a coefficient length different than 0 or 1\n";
+                    return -1;
+                }
+
+                if(coeffLength == 0 && numOfZeros != 15){
+                    skips += (1 << numOfZeros)-1;
+                    skips += getExtraSkips(dataInfo.scanData, byteOffset, bitOffset, numOfZeros);             
+
+                    if(dataInfo.scanDataSize <= byteOffset){
+                        return checkIfLastBlocksHaveOnlyZeroes(dataInfo, j, 
+                            blockY, blockX, heightToCover, widthToCover,
+                            realWidth, zigzagTable, component.blocks);
+                    }
+
+                    updateBlockUntilEnd(dataInfo, j, refinementPositive, 
+                        byteOffset, bitOffset, zigzagTable, component.blocks[blockPos]);
+                    break;
+                }
+
+                if(coeffLength==0){// For the case of F0
+                    skipRefinementZeros(dataInfo, j, 15, byteOffset, bitOffset,
+                            refinementPositive, zigzagTable, component.blocks[blockPos]);
+                    continue;
+                }
+                
+
+                
+                if(j>dataInfo.endSpectral){
+                    std::cerr << "Error: During decompression the data of one of the blocks exceeded the endSpectral of " << dataInfo.endSpectral-0 
+                            << " in the data block covering the componet with id " << component.componentID-0 << " \n";
+                    return -1;
+                }
+
+
+                coeff = getCoefficient(dataInfo.scanData, byteOffset, bitOffset, coeffLength);
+
+
+                skipRefinementZeros(dataInfo, j, numOfZeros, byteOffset, bitOffset,
+                            refinementPositive, zigzagTable, component.blocks[blockPos]);
+
+
+                component.blocks[blockPos].blockData[zigzagTable[j]] = coeff << dataInfo.newRefinementPos;
             }
 
-            updateBlockUntilEnd(dataInfo, dataInfo.startSpectral, refinementPositive,
-                byteOffset, bitOffset, zigzagTable, component.blocks[i+1]);
-            
-            --skips;
         }
 
-    }
-    
+    }    
 
     return err;
 
@@ -648,28 +677,48 @@ void updateBlockUntilEnd(DataInfo & dataInfo, unsigned char start, int refinemen
 
 
 int checkIfLastBlocksHaveOnlyZeroes(DataInfo & dataInfo, unsigned char firstBlockStart,
-                                    int blockOffset, int numOfBlocks, unsigned char (& zigzagTable)[64], 
-                                    std::vector<JpgBlock> & blocks){
+                                    int currentBlockY, int currentBlockX,
+                                    int heightToCover, int widthToCover, int realWidth,
+                                    unsigned char (& zigzagTable)[64], std::vector<JpgBlock> & blocks){
+
+    int blockY = currentBlockY;
+    int blockX = currentBlockX;
+    int blockPos = blockY*realWidth + blockX;
 
     for(int j = firstBlockStart; j<=dataInfo.endSpectral; ++j){
 
         /// We only read bits if if the cell has a value already
-        if(blocks[blockOffset].blockData[zigzagTable[j]]!=0){
+        if(blocks[blockPos].blockData[zigzagTable[j]]!=0){
+            std::cerr << "ERROR: When refining the blocks of the image the program reached the end of the scanData before finishing the refinement (first block failed)\n";
             return -1;
         }
     }
 
-    for(int i = blockOffset+1; i< numOfBlocks; ++i){
+    ++blockX;
 
-        for(int j = dataInfo.startSpectral; j<=dataInfo.endSpectral; ++j){
+    if(blockX<widthToCover){
+        blockX = 0;
+        ++blockY;
+    }
 
-            /// We only read bits if if the cell has a value already
-            if(blocks[i].blockData[zigzagTable[j]]!=0){
-                std::cerr << "ERROR: When refining the blocks of the image the program reached the end of the scanData before finishing the refinement\n";
-                return -1;
+    for(;blockY<heightToCover; ++blockY){
+        for(;blockX<widthToCover; ++blockX){
+
+            blockPos = blockY*realWidth + blockX;
+
+            for(int j = firstBlockStart; j<=dataInfo.endSpectral; ++j){
+
+                /// We only read bits if if the cell has a value already
+                if(blocks[blockPos].blockData[zigzagTable[j]]!=0){
+                    std::cerr << "ERROR: When refining the blocks of the image the program reached the end of the scanData before finishing the refinement\n";
+                    return -1;
+                }
             }
+
         }
     }
 
-    return 0;
+    return 0;                      
+    
+
 }
