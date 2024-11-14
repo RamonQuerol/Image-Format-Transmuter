@@ -96,7 +96,7 @@ int getConfigFromFlags(int argc, char* argv[], InitConfig & config){
 
         // Flag that prints the current version of the program
         if(option == "--version"){
-            std::cout << "ImageFormatTransmuter version 0.3\n";
+            std::cout << "ImageFormatTransmuter version 0.5.0\n";
             config.is_info_only = true;
             return 0;
         }
