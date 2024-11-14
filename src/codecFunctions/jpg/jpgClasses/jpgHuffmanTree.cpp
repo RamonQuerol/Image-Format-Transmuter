@@ -96,7 +96,7 @@ unsigned char JpgHuffmanTree::decodeChar(std::unique_ptr<unsigned char []> & sca
 
         currentNode = *nextNodePointer.lock();
 
-        if(moveBitOffset(byteOffset, bitOffset, bitMultiplier)){
+        if(moveBitOffset(byteOffset, bitOffset, bitMultiplier) && !currentNode.hasCharacter){
             currentByte = scanData[byteOffset];
         }
     }

@@ -1,4 +1,14 @@
+
 #include <memory>
+#include <vector>
+
+#include "jpgStructs.hpp"
+
+/// @brief Initializes variable with the data stored inside the header
+void extractHeaderData(std::unique_ptr<unsigned char []> & fileData, unsigned int fileDataOffset,
+                       unsigned char & bitsPerPixels, unsigned short & height, unsigned short & width,
+                       std::vector<Component> & components, int & numComponents);
+
 
 /// @brief Extracts the scan data stored in and after fileData[fileDataOffset], creates a new array of bytes and stores it in scanData. Addionaly modifies the offset and remaining values to match the next segment marker.
 /// @param fileData Byte array with all the data of jpeg file

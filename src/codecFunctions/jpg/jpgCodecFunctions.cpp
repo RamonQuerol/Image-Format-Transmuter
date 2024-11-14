@@ -52,8 +52,11 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     unsigned short segmentLenght;
     bool reachedEndSegment = false;
 
-    std::unique_ptr<unsigned char[]> scanData;
-    unsigned int scanDataSize;
+    std::vector<std::unique_ptr<DataInfo>> dataInfoBlocks;
+    std::unique_ptr<DataInfo> tempDataInfo = std::make_unique<DataInfo>();
+
+    /// Marker consistancy
+    JpgEncoding imageEncoding = UNDEFINED_JPG_ENCODING;
 
     /// Image characteristics
     unsigned char bitsPerPixels;
@@ -62,7 +65,6 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
     /// Component managing
     std::vector<Component> components;
-    Component tempComponent;
     int numComponents = 0;
     
     JpgType jpgType;
@@ -70,11 +72,8 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     /// Huffman trees
     std::vector<JpgHuffmanTree> dcHuffmanTrees; 
     std::vector<JpgHuffmanTree> acHuffmanTrees;
-    unsigned int huffmanByteOffset = 0;
-    unsigned int huffmanBitOffset = 7;
 
-    /// Blocks
-    JpgBlock tempBlock;
+    /// Zigzag table
 
     unsigned char zigzagTable[64];
     createZigzagTable(zigzagTable);
@@ -120,24 +119,27 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
             remainingBytes = remainingBytes - segmentLenght; 
             switch(segmentMarker){
                 case BASELINE_SEGMENT_MARKER:
-                    bitsPerPixels = fileData[fileDataOffset];
-                    height = extractBigEndianUshort(fileData, fileDataOffset+1);
-                    width = extractBigEndianUshort(fileData, fileDataOffset +3);
-
-                    numComponents = fileData[fileDataOffset + 5];
-
-                    for(int i = 0; i<numComponents; ++i){
-                        tempComponent.componentID = fileData[fileDataOffset+6+i*3];
-                        getComponentSamplingFactors(fileData[fileDataOffset + 7 + i*3], tempComponent);
-                        tempComponent.quatizationTable = fileData[fileDataOffset + 8 + i*3];
-                        
-                        components.push_back(tempComponent);
+                    if(imageEncoding != UNDEFINED_JPG_ENCODING){
+                        std::cerr << "ERROR: The input image has more than one encoding(baseline, progressive, etc)\n";
+                        return -1;
                     }
 
+                    extractHeaderData(fileData, fileDataOffset, bitsPerPixels, height, width,
+                                         components, numComponents);
+                    
+                    imageEncoding = BASELINE_ENCODING;
                     break;
                 case PROGRESSIVE_SEGEMENT_MARKER:
-                    std::cerr << "The program does not currently support progressive DCT-based jpeg\n";
-                    return -1;
+                    if(imageEncoding != UNDEFINED_JPG_ENCODING){
+                        std::cerr << "ERROR: The input image has more than one encoding(baseline, progressive, etc)\n";
+                        return -1;
+                    }
+
+                    extractHeaderData(fileData, fileDataOffset, bitsPerPixels, height, width,
+                                         components, numComponents);
+                    
+                    imageEncoding = PROGRESSIVE_ENCODING;
+                    break;
                 case QUANTIZATION_SEGMENT_MARKER:
                     if(segmentLenght!=67){
 
@@ -158,27 +160,38 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
                 case HUFFMAN_SEGMENT_MARKER:
                     if(fileData[fileDataOffset]/16){ // 1 means that is an AC huffman table
-                        acHuffmanTrees.push_back(JpgHuffmanTree(fileData, fileDataOffset, segmentLenght, err));
+                        tempDataInfo->acTrees.push_back(JpgHuffmanTree(fileData, fileDataOffset, segmentLenght, err));
                     }else{ // 0 means that is a DC huffman table
                         dcHuffmanTrees.push_back(JpgHuffmanTree(fileData, fileDataOffset, segmentLenght, err));
                     }
                     break;
                 case SCAN_SEGMENT_MARKER:
 
-                    for(int i = 0; i<numComponents; ++i){
-                        assignHuffTablesToComponent(fileData[fileDataOffset+2+i*2],components[i]);
+                    tempDataInfo->numComponents = fileData[fileDataOffset];
+                    ++fileDataOffset;
+                    for(int i = 0; i<tempDataInfo->numComponents; ++i, fileDataOffset += 2){
+                        tempDataInfo->component.push_back(createComponentInfo(fileData, fileDataOffset));
                     }
-                    
-                    fileDataOffset += segmentLenght-2;
+
+                    tempDataInfo->startSpectral = fileData[fileDataOffset];
+                    tempDataInfo->endSpectral = fileData[fileDataOffset+1];
+
+                    tempDataInfo->currentRefinementPos = fileData[fileDataOffset+2]/16;
+                    tempDataInfo->newRefinementPos = fileData[fileDataOffset+2]%16;
+
+                    fileDataOffset += 3;
 
                     // Note: The function will change fileDataOffset amd remainingBytes acording to
                     // the size of the scan data inside the file (which is a bit more that scanDataSize)
-                    scanDataSize = extractScanData(fileData, fileDataOffset, remainingBytes, scanData);
+                    tempDataInfo->scanDataSize = extractScanData(fileData, fileDataOffset, remainingBytes, tempDataInfo->scanData);
 
-                    if(scanDataSize < 0){
+                    if(tempDataInfo->scanDataSize < 0){
                         return -1;
                     }
-                    
+
+                    dataInfoBlocks.push_back(move(tempDataInfo));
+                    tempDataInfo = std::make_unique<DataInfo>();                    
+
                     continue;
 
                 default:
@@ -198,29 +211,23 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
     /// DECOMPRESSING
 
-    while(scanDataSize-1>huffmanByteOffset){
-
-        for(auto &component : components){
-            
-            for(int i = 0; i<component.verticalSampling*component.horizontalSampling; ++i){
-
-                if(decompressJpgBlock(scanData, huffmanByteOffset, huffmanBitOffset, 
-                    dcHuffmanTrees[component.huffmanTableDC], acHuffmanTrees[component.huffmanTableAC], 
-                    zigzagTable, tempBlock)){
-                    return -1;
-                }
-
-                component.blocks.push_back(tempBlock);
-
-                std::memset(&tempBlock, 0, sizeof(JpgBlock));
+    switch (imageEncoding){
+        case BASELINE_ENCODING:
+            if(decompressBaslineJpg(*(dataInfoBlocks[0]), zigzagTable, components, dcHuffmanTrees)){
+                return -1;
             }
-        }
+            break;
+        case PROGRESSIVE_ENCODING:
+            if(decompressProgressiveJpg(dataInfoBlocks, height, width, zigzagTable, components, dcHuffmanTrees)){
+                return -1;
+            }
+            break;
+        default:
+            std::cerr << "ERROR: The program could not find the encoding segment of the image\n";
+            return -1;
     }
 
-
-    for(auto &component : components){
-        reverseDifferentialEncoding(component.blocks);
-    }
+    
 
     /// At this point every Block its independent of every other block in the image
 

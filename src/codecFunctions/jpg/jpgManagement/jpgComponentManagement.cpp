@@ -1,8 +1,19 @@
 #include "jpgComponentManagement.hpp"
 
-void assignHuffTablesToComponent(unsigned char huffTableByte, Component & component){
-    component.huffmanTableDC = huffTableByte/16;
-    component.huffmanTableAC = huffTableByte%16;
+
+#include <iostream>
+
+ComponentDataInfo createComponentInfo(std::unique_ptr<unsigned char []> & fileData, int offset){
+    ComponentDataInfo componentInfo;
+    unsigned char huffTableByte;
+
+    componentInfo.componentID = fileData[offset]-1;
+    
+    huffTableByte = fileData[offset+1];
+    componentInfo.huffmanTableDC = huffTableByte/16;
+    componentInfo.huffmanTableAC = huffTableByte%16;
+
+    return componentInfo;
 }
 
 
