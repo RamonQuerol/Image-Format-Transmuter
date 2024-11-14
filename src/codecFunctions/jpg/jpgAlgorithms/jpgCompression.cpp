@@ -402,11 +402,12 @@ int applyRefinementToDC(DataInfo & dataInfo, std::vector<Component> & components
             subSamplingMult = component.verticalSampling*component.horizontalSampling;
 
             for(int j = 0; j<subSamplingMult; ++j){
+
                 if(currentByte & bitMultiplier){
                     component.blocks[i*subSamplingMult + j].blockData[0] += 1 << dataInfo.newRefinementPos;
                 }   
 
-                if(moveBitOffset(byteOffset, bitOffset, bitMultiplier)){
+                if(moveBitOffset(byteOffset, bitOffset, bitMultiplier) && byteOffset<dataInfo.scanDataSize){
                     currentByte = dataInfo.scanData[byteOffset];
                 }
             }
