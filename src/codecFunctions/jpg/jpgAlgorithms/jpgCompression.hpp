@@ -5,6 +5,7 @@
 
 
 int decompressBaslineJpg(DataInfo & dataInfo, unsigned char (& zigzagTable)[64],
+                         unsigned short restartInterval, bool usesRestartMarkers,
                          std::vector<Component> & components, 
                          std::vector<JpgHuffmanTree> & dcHuffmanTrees);
 

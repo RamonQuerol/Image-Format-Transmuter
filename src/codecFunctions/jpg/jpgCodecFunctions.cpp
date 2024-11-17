@@ -22,16 +22,7 @@
 #include "configEnums.hpp"
 
 
-#define START_SEGEMENT_MARKER 55551 /// FF D8
-#define APP0_SEGMENT_MARKER 57599 /// FF E0
-#define APP1_SEGMENT_MARKER 57855 // FF E1
-#define QUANTIZATION_SEGMENT_MARKER 56319 // FF DB
-#define BASELINE_SEGMENT_MARKER 49407 // FF C0
-#define PROGRESSIVE_SEGEMENT_MARKER 49919 /// FF C2
-#define HUFFMAN_SEGMENT_MARKER 50431 /// FF C4
-#define SCAN_SEGMENT_MARKER 56063 /// FF DA
-#define COMMENT_SEGMENT_MARKER 65279 // FF FE
-#define END_SEGMENT_MARKER 55807 /// FF D9
+
 
 
 int decodeJPG(std::fstream & inputFile, Image & decodedImage){
@@ -83,6 +74,10 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     std::vector<QuantificationTable> quantizationTables;
 
     QuantificationTable tempQuantTable;
+
+    /// Restart Intervals variables
+    unsigned short restartInterval = 0;
+    bool usesRestartMarkers = false; /// True if the jpeg has restart modulo markers
 
     /// Result variables
     std::unique_ptr<Pixel []> imagePixels;
@@ -165,6 +160,9 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
                         dcHuffmanTrees.push_back(JpgHuffmanTree(fileData, fileDataOffset, segmentLenght, err));
                     }
                     break;
+                case DEFINE_RESTART_MARKER:
+                    restartInterval = extractBigEndianUshort(fileData, fileDataOffset);
+                    break;
                 case SCAN_SEGMENT_MARKER:
 
                     tempDataInfo->numComponents = fileData[fileDataOffset];
@@ -183,7 +181,8 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
                     // Note: The function will change fileDataOffset amd remainingBytes acording to
                     // the size of the scan data inside the file (which is a bit more that scanDataSize)
-                    tempDataInfo->scanDataSize = extractScanData(fileData, fileDataOffset, remainingBytes, tempDataInfo->scanData);
+                    tempDataInfo->scanDataSize = extractScanData(fileData, fileDataOffset, usesRestartMarkers,
+                                                                 remainingBytes, tempDataInfo->scanData);
 
                     if(tempDataInfo->scanDataSize < 0){
                         return -1;
@@ -213,7 +212,8 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
     switch (imageEncoding){
         case BASELINE_ENCODING:
-            if(decompressBaslineJpg(*(dataInfoBlocks[0]), zigzagTable, components, dcHuffmanTrees)){
+            if(decompressBaslineJpg(*(dataInfoBlocks[0]), zigzagTable, restartInterval, usesRestartMarkers,
+                                    components, dcHuffmanTrees)){
                 return -1;
             }
             break;
