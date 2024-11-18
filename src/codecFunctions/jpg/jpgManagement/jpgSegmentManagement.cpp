@@ -45,6 +45,7 @@ int extractScanData(std::unique_ptr<unsigned char[]> & fileData, unsigned int  &
     int uncheckedBytes = remainingBytes;
 
     int numOfFF = 0;
+    int restartCorrection = 0; // If the image uses restart markers, the scanData offset need some corrections
     
     std::vector<int> checkHistory;
     int startCopyOffset;
@@ -89,12 +90,13 @@ int extractScanData(std::unique_ptr<unsigned char[]> & fileData, unsigned int  &
     for(int i = 0; i<numOfFF-1; ++i){
         nextCopySize = checkHistory[i]-startCopyOffset+1;
 
-        memcpy(scanData.get()+startCopyOffset-i, startingPointer+startCopyOffset, nextCopySize);
+        memcpy(scanData.get()+startCopyOffset-i-restartCorrection, startingPointer+startCopyOffset, nextCopySize);
 
         if(fileData[fileDataOffset+startCopyOffset+nextCopySize-1]==0xFF){ /// The FF was FF00
             startCopyOffset = checkHistory[i]+2;
         }else{ /// The FF was a Restart modulo
             startCopyOffset = checkHistory[i]+3;
+            ++restartCorrection;
         }
         
     }

@@ -13,7 +13,8 @@
 int decompressBaselineBlock(std::unique_ptr<unsigned char []> & scanData, 
                             unsigned int & byteOffset, unsigned int & bitOffset, 
                             JpgHuffmanTree & dcHuffmanTree, JpgHuffmanTree & acHuffmanTree,
-                            unsigned char (& zigzagTable)[64], JpgBlock & outputBlock);
+                            int & prevDC, unsigned char (& zigzagTable)[64],
+                            JpgBlock & outputBlock);
 
 
 /// Progressive first dataInfo function prototypes
@@ -76,23 +77,24 @@ int decompressBaslineJpg(DataInfo & dataInfo, unsigned char (& zigzagTable)[64],
                          std::vector<JpgHuffmanTree> & dcHuffmanTrees){
 
     JpgBlock tempBlock;
-    unsigned int huffmanByteOffset = 0;
-    unsigned int huffmanBitOffset = 7;
+    unsigned int byteOffset = 0;
+    unsigned int bitOffset = 7;
+    unsigned short restartCounter = 0;    
 
     for(int i = 0; i < components.size(); ++i){
         components[i].huffmanTableDC = dataInfo.component[i].huffmanTableDC;
         components[i].huffmanTableAC = dataInfo.component[i].huffmanTableAC;
     }
 
-    while(dataInfo.scanDataSize-1>huffmanByteOffset){
+    while(dataInfo.scanDataSize-1>byteOffset){
 
         for(auto &component : components){
             
             for(int i = 0; i<component.verticalSampling*component.horizontalSampling; ++i){
 
-                if(decompressBaselineBlock(dataInfo.scanData, huffmanByteOffset, huffmanBitOffset, 
+                if(decompressBaselineBlock(dataInfo.scanData, byteOffset, bitOffset, 
                     dcHuffmanTrees[component.huffmanTableDC], dataInfo.acTrees[component.huffmanTableAC], 
-                    zigzagTable, tempBlock)){
+                    component.prevDC, zigzagTable, tempBlock)){
                     return -1;
                 }
 
@@ -101,11 +103,21 @@ int decompressBaslineJpg(DataInfo & dataInfo, unsigned char (& zigzagTable)[64],
                 std::memset(&tempBlock, 0, sizeof(JpgBlock));
             }
         }
-    }
 
-    /// Once we have all the blocks we reverse differential encoding
-    for(auto &component : components){
-        reverseDifferentialEncoding(component.blocks);
+        ++restartCounter;
+        if(restartInterval && restartCounter == restartInterval){
+            
+            restartCounter = 0;
+
+            for(auto & component : components){
+                component.prevDC = 0;
+            }
+
+            if(usesRestartMarkers  && bitOffset!=7){
+                ++byteOffset;
+                bitOffset = 7;
+            }
+        }
     }
 
     return 0;
@@ -182,7 +194,8 @@ int decompressProgressiveJpg(std::vector<std::unique_ptr<DataInfo>> & dataInfoBl
 int decompressBaselineBlock(std::unique_ptr<unsigned char []> & scanData, 
                             unsigned int & byteOffset, unsigned int & bitOffset, 
                             JpgHuffmanTree & dcHuffmanTree, JpgHuffmanTree & acHuffmanTree,
-                            unsigned char (& zigzagTable)[64], JpgBlock & outputBlock){
+                            int & prevDC, unsigned char (& zigzagTable)[64], 
+                            JpgBlock & outputBlock){
 
     int err = 0;
     unsigned char compressedAC;
@@ -202,6 +215,8 @@ int decompressBaselineBlock(std::unique_ptr<unsigned char []> & scanData,
         outputBlock.blockData[0] = getCoefficient(scanData, byteOffset, bitOffset, coeffLength);
     }
 
+    outputBlock.blockData[0] += prevDC;
+    prevDC = outputBlock.blockData[0];
 
     /// AC coefficients
     for(int i = 1; i<64 && !err; ++i){

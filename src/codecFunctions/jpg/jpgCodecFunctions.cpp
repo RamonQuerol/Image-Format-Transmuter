@@ -76,7 +76,7 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     QuantificationTable tempQuantTable;
 
     /// Restart Intervals variables
-    unsigned short restartInterval = 0;
+    unsigned short restartInterval = -1;
     bool usesRestartMarkers = false; /// True if the jpeg has restart modulo markers
 
     /// Result variables

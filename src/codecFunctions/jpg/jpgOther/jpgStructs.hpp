@@ -22,6 +22,7 @@ struct Component{
     unsigned char quatizationTable;
     unsigned char huffmanTableDC;
     unsigned char huffmanTableAC;
+    int prevDC = 0;
     std::vector<JpgBlock> blocks;
 };
 
