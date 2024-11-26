@@ -95,6 +95,7 @@ int decompressBaslineJpg(DataInfo & dataInfo, unsigned char (& zigzagTable)[64],
                 if(decompressBaselineBlock(dataInfo.scanData, byteOffset, bitOffset, 
                     dcHuffmanTrees[component.huffmanTableDC], dataInfo.acTrees[component.huffmanTableAC], 
                     component.prevDC, zigzagTable, tempBlock)){
+                    std::cout << dataInfo.scanData[byteOffset-1]-0  << "\n";
                     return -1;
                 }
 
@@ -105,8 +106,7 @@ int decompressBaslineJpg(DataInfo & dataInfo, unsigned char (& zigzagTable)[64],
         }
 
         ++restartCounter;
-        if(restartInterval && restartCounter == restartInterval){
-            
+        if(restartInterval > 0 && restartCounter == restartInterval){
             restartCounter = 0;
 
             for(auto & component : components){
