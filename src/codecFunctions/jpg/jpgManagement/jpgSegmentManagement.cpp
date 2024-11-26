@@ -102,7 +102,7 @@ int extractScanData(std::unique_ptr<unsigned char[]> & fileData, unsigned int  &
     }
 
     nextCopySize = checkHistory[numOfFF-1]-startCopyOffset;
-    memcpy(scanData.get()+startCopyOffset-numOfFF+1, startingPointer+startCopyOffset, nextCopySize);
+    memcpy(scanData.get()+startCopyOffset-numOfFF+1-restartCorrection, startingPointer+startCopyOffset, nextCopySize);
 
     remainingBytes = uncheckedBytes;
     fileDataOffset += checkedBytes;
