@@ -218,7 +218,8 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
             }
             break;
         case PROGRESSIVE_ENCODING:
-            if(decompressProgressiveJpg(dataInfoBlocks, height, width, zigzagTable, components, dcHuffmanTrees)){
+            if(decompressProgressiveJpg(dataInfoBlocks, restartInterval, usesRestartMarkers, height, width,
+                                        zigzagTable, components, dcHuffmanTrees)){
                 return -1;
             }
             break;
