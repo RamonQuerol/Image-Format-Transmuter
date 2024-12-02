@@ -46,6 +46,7 @@ struct DataInfo{
     unsigned char currentRefinementPos;
     unsigned char newRefinementPos;
 
+    unsigned short restartInterval;
     std::vector<JpgHuffmanTree> acTrees;
 };
 

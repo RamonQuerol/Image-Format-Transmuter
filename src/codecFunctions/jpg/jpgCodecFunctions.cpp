@@ -76,7 +76,7 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
     QuantificationTable tempQuantTable;
 
     /// Restart Intervals variables
-    unsigned short restartInterval = -1;
+    unsigned short currentRestartInterval = 0;
     bool usesRestartMarkers = false; /// True if the jpeg has restart modulo markers
 
     /// Result variables
@@ -161,7 +161,7 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
                     }
                     break;
                 case DEFINE_RESTART_MARKER:
-                    restartInterval = extractBigEndianUshort(fileData, fileDataOffset);
+                    currentRestartInterval = extractBigEndianUshort(fileData, fileDataOffset);
                     break;
                 case SCAN_SEGMENT_MARKER:
 
@@ -188,6 +188,8 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
                         return -1;
                     }
 
+                    tempDataInfo->restartInterval = currentRestartInterval;
+
                     dataInfoBlocks.push_back(move(tempDataInfo));
                     tempDataInfo = std::make_unique<DataInfo>();                    
 
@@ -212,13 +214,13 @@ int decodeJPG(std::fstream & inputFile, Image & decodedImage){
 
     switch (imageEncoding){
         case BASELINE_ENCODING:
-            if(decompressBaslineJpg(*(dataInfoBlocks[0]), zigzagTable, restartInterval, usesRestartMarkers,
+            if(decompressBaslineJpg(*(dataInfoBlocks[0]), zigzagTable, usesRestartMarkers,
                                     components, dcHuffmanTrees)){
                 return -1;
             }
             break;
         case PROGRESSIVE_ENCODING:
-            if(decompressProgressiveJpg(dataInfoBlocks, restartInterval, usesRestartMarkers, height, width,
+            if(decompressProgressiveJpg(dataInfoBlocks, usesRestartMarkers, height, width,
                                         zigzagTable, components, dcHuffmanTrees)){
                 return -1;
             }
