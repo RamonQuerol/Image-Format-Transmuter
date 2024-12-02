@@ -29,8 +29,9 @@ void extractHeaderData(std::unique_ptr<unsigned char []> & fileData, unsigned in
 }
 
 
-int extractScanData(std::unique_ptr<unsigned char[]> & fileData,unsigned int  & fileDataOffset,
-                    int & remainingBytes, std::unique_ptr<unsigned char[]> & scanData){
+int extractScanData(std::unique_ptr<unsigned char[]> & fileData, unsigned int  & fileDataOffset,
+                    bool & usesRestartMarkers,  int & remainingBytes, 
+                    std::unique_ptr<unsigned char[]> & scanData){
     
     // When copying the scanData is important to take to account that since it ends when it reaches 
     // the next segment marker (which always starts with FF), the actual FF values in scan data have
@@ -44,8 +45,9 @@ int extractScanData(std::unique_ptr<unsigned char[]> & fileData,unsigned int  & 
     int uncheckedBytes = remainingBytes;
 
     int numOfFF = 0;
+    int restartCorrection = 0; // If the image uses restart markers, the scanData offset need some corrections
     
-    std::unique_ptr<std::vector<int>> checkHistory = std::make_unique<std::vector<int>>();
+    std::vector<int> checkHistory;
     int startCopyOffset;
     int nextCopySize;
 
@@ -63,10 +65,16 @@ int extractScanData(std::unique_ptr<unsigned char[]> & fileData,unsigned int  & 
         checkedBytes = supportPointer-startingPointer;
 
         uncheckedBytes = remainingBytes - checkedBytes;
-        checkHistory->push_back(checkedBytes);
+        checkHistory.push_back(checkedBytes);
         
         ++supportPointer;
         ++numOfFF;
+
+        if(supportPointer[0] >= 0xD0 && supportPointer[0] <= 0xD7){
+            usesRestartMarkers = true;
+            checkHistory[checkHistory.size()-1]--;
+            continue;
+        }
 
         if(supportPointer[0] != 0){
             endOfScanData = true;
@@ -80,15 +88,21 @@ int extractScanData(std::unique_ptr<unsigned char[]> & fileData,unsigned int  & 
 
     /// Once we have scanned the scan data we can copy the data to the new array
     for(int i = 0; i<numOfFF-1; ++i){
-        nextCopySize = checkHistory->at(i)-startCopyOffset+1;
+        nextCopySize = checkHistory[i]-startCopyOffset+1;
 
-        memcpy(scanData.get()+startCopyOffset-i, startingPointer+startCopyOffset, nextCopySize);
+        memcpy(scanData.get()+startCopyOffset-i-restartCorrection, startingPointer+startCopyOffset, nextCopySize);
 
-        startCopyOffset = checkHistory->at(i)+2;
+        if(fileData[fileDataOffset+startCopyOffset+nextCopySize-1]==0xFF){ /// The FF was FF00
+            startCopyOffset = checkHistory[i]+2;
+        }else{ /// The FF was a Restart modulo
+            startCopyOffset = checkHistory[i]+3;
+            ++restartCorrection;
+        }
+        
     }
 
-    nextCopySize = checkHistory->at(numOfFF-1)-startCopyOffset;
-    memcpy(scanData.get()+startCopyOffset-numOfFF+1, startingPointer+startCopyOffset, nextCopySize);
+    nextCopySize = checkHistory[numOfFF-1]-startCopyOffset;
+    memcpy(scanData.get()+startCopyOffset-numOfFF+1-restartCorrection, startingPointer+startCopyOffset, nextCopySize);
 
     remainingBytes = uncheckedBytes;
     fileDataOffset += checkedBytes;

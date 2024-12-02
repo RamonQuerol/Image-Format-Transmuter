@@ -13,17 +13,20 @@
 int decompressBaselineBlock(std::unique_ptr<unsigned char []> & scanData, 
                             unsigned int & byteOffset, unsigned int & bitOffset, 
                             JpgHuffmanTree & dcHuffmanTree, JpgHuffmanTree & acHuffmanTree,
-                            unsigned char (& zigzagTable)[64], JpgBlock & outputBlock);
+                            int & prevDC, unsigned char (& zigzagTable)[64],
+                            JpgBlock & outputBlock);
 
 
 /// Progressive first dataInfo function prototypes
 
 int getFirstProgressiveDCs(DataInfo & dataInfo, std::vector<Component> & components,
+                           bool usesRestartMarkers,
                            unsigned short blockHeight, unsigned short blockWidth,
                            std::vector<JpgHuffmanTree> & dcHuffmanTrees);
 
 
 int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
+                           bool usesRestartMarkers,
                            bool verticalFilling, bool horizontalFilling, 
                            int blockHeight, int blockWidth,
                            JpgHuffmanTree & acHuffmanTree, unsigned char (& zigzagTable)[64]);
@@ -31,9 +34,10 @@ int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
 /// Refinement function prototypes
 
 int applyRefinementToDC(DataInfo & dataInfo, std::vector<Component> & components,
+                        bool usesRestartMarkers,
                         unsigned short blockHeight, unsigned short blockWidth);
 
-int applyRefinementToACs(DataInfo & dataInfo, Component & component,
+int applyRefinementToACs(DataInfo & dataInfo, Component & component, bool usesRestartMarkers,
                          bool verticalFilling, bool horizontalFilling, 
                          int blockHeight, int blockWidth,
                          JpgHuffmanTree & acHuffmanTree, unsigned char (& zigzagTable)[64]);
@@ -71,27 +75,28 @@ int checkIfLastBlocksHaveOnlyZeroes(DataInfo & dataInfo, unsigned char firstBloc
 
 
 int decompressBaslineJpg(DataInfo & dataInfo, unsigned char (& zigzagTable)[64],
-                         std::vector<Component> & components, 
+                         bool usesRestartMarkers, std::vector<Component> & components, 
                          std::vector<JpgHuffmanTree> & dcHuffmanTrees){
 
     JpgBlock tempBlock;
-    unsigned int huffmanByteOffset = 0;
-    unsigned int huffmanBitOffset = 7;
+    unsigned int byteOffset = 0;
+    unsigned int bitOffset = 7;
+    unsigned short restartCounter = 0;    
 
     for(int i = 0; i < components.size(); ++i){
         components[i].huffmanTableDC = dataInfo.component[i].huffmanTableDC;
         components[i].huffmanTableAC = dataInfo.component[i].huffmanTableAC;
     }
 
-    while(dataInfo.scanDataSize-1>huffmanByteOffset){
+    while(dataInfo.scanDataSize-1>byteOffset){
 
         for(auto &component : components){
             
             for(int i = 0; i<component.verticalSampling*component.horizontalSampling; ++i){
 
-                if(decompressBaselineBlock(dataInfo.scanData, huffmanByteOffset, huffmanBitOffset, 
+                if(decompressBaselineBlock(dataInfo.scanData, byteOffset, bitOffset, 
                     dcHuffmanTrees[component.huffmanTableDC], dataInfo.acTrees[component.huffmanTableAC], 
-                    zigzagTable, tempBlock)){
+                    component.prevDC, zigzagTable, tempBlock)){
                     return -1;
                 }
 
@@ -100,11 +105,20 @@ int decompressBaslineJpg(DataInfo & dataInfo, unsigned char (& zigzagTable)[64],
                 std::memset(&tempBlock, 0, sizeof(JpgBlock));
             }
         }
-    }
 
-    /// Once we have all the blocks we reverse differential encoding
-    for(auto &component : components){
-        reverseDifferentialEncoding(component.blocks);
+        ++restartCounter;
+        if(dataInfo.restartInterval > 0 && restartCounter == dataInfo.restartInterval){
+            restartCounter = 0;
+
+            for(auto & component : components){
+                component.prevDC = 0;
+            }
+
+            if(usesRestartMarkers  && bitOffset!=7){
+                ++byteOffset;
+                bitOffset = 7;
+            }
+        }
     }
 
     return 0;
@@ -112,7 +126,8 @@ int decompressBaslineJpg(DataInfo & dataInfo, unsigned char (& zigzagTable)[64],
 }
 
 
-int decompressProgressiveJpg(std::vector<std::unique_ptr<DataInfo>> & dataInfoBlocks, 
+int decompressProgressiveJpg(std::vector<std::unique_ptr<DataInfo>> & dataInfoBlocks,
+                             bool usesRestartMarkers,
                              unsigned short height, unsigned short width,
                              unsigned char (& zigzagTable)[64], std::vector<Component> & components, 
                              std::vector<JpgHuffmanTree> & dcHuffmanTrees){
@@ -138,30 +153,28 @@ int decompressProgressiveJpg(std::vector<std::unique_ptr<DataInfo>> & dataInfoBl
 
             if(dataInfo->currentRefinementPos == 0){ // First DC DataInfo
                 
-                err = getFirstProgressiveDCs(*dataInfo, components, blockHeight, blockWidth, dcHuffmanTrees);
-
-                
-                /// In progressive jpgs the differential encoding it's applied in the first DC block
-                /// so we reverse it now
-                for(auto &component : components){
-                    reverseDifferentialEncoding(component.blocks);
-                }
+                err = getFirstProgressiveDCs(*dataInfo, components, usesRestartMarkers,
+                                             blockHeight, blockWidth, dcHuffmanTrees);
 
             }else{ // Refinement DC DataInfo
 
-                err = applyRefinementToDC(*dataInfo, components, blockHeight, blockWidth);
+                err = applyRefinementToDC(*dataInfo, components, usesRestartMarkers, blockHeight, blockWidth);
             }
 
         }else{ /// AC DataInfo
             componentID = dataInfo->component[0].componentID;
 
             if(dataInfo->currentRefinementPos == 0){ // First AC DataInfo
-                err = getFirstProgressiveACs(*dataInfo, components[componentID], verticalFilling && !componentID, 
-                horizontalFilling && !componentID, blockHeight, blockWidth, dataInfo->acTrees[0], zigzagTable);
+
+                err = getFirstProgressiveACs(*dataInfo, components[componentID], usesRestartMarkers,
+                        verticalFilling && !componentID, horizontalFilling && !componentID,
+                        blockHeight, blockWidth, dataInfo->acTrees[0], zigzagTable);
 
             }else{ // Refinement AC DataInfo
-                err = applyRefinementToACs(*dataInfo, components[componentID], verticalFilling && !componentID, 
-                    horizontalFilling && !componentID, blockHeight, blockWidth, dataInfo->acTrees[0], zigzagTable);
+
+                err = applyRefinementToACs(*dataInfo, components[componentID], usesRestartMarkers,
+                    verticalFilling && !componentID, horizontalFilling && !componentID,
+                    blockHeight, blockWidth, dataInfo->acTrees[0], zigzagTable);
             }
 
         }
@@ -181,7 +194,8 @@ int decompressProgressiveJpg(std::vector<std::unique_ptr<DataInfo>> & dataInfoBl
 int decompressBaselineBlock(std::unique_ptr<unsigned char []> & scanData, 
                             unsigned int & byteOffset, unsigned int & bitOffset, 
                             JpgHuffmanTree & dcHuffmanTree, JpgHuffmanTree & acHuffmanTree,
-                            unsigned char (& zigzagTable)[64], JpgBlock & outputBlock){
+                            int & prevDC, unsigned char (& zigzagTable)[64], 
+                            JpgBlock & outputBlock){
 
     int err = 0;
     unsigned char compressedAC;
@@ -201,6 +215,8 @@ int decompressBaselineBlock(std::unique_ptr<unsigned char []> & scanData,
         outputBlock.blockData[0] = getCoefficient(scanData, byteOffset, bitOffset, coeffLength);
     }
 
+    outputBlock.blockData[0] += prevDC;
+    prevDC = outputBlock.blockData[0];
 
     /// AC coefficients
     for(int i = 1; i<64 && !err; ++i){
@@ -240,6 +256,7 @@ int decompressBaselineBlock(std::unique_ptr<unsigned char []> & scanData,
 /// Progressive first dataInfo  functions
 
 int getFirstProgressiveDCs(DataInfo & dataInfo, std::vector<Component> & components,
+                           bool usesRestartMarkers,
                            unsigned short blockHeight, unsigned short blockWidth,
                            std::vector<JpgHuffmanTree> & dcHuffmanTrees){
 
@@ -248,7 +265,8 @@ int getFirstProgressiveDCs(DataInfo & dataInfo, std::vector<Component> & compone
     unsigned char coeffLength;
     unsigned int byteOffset = 0;
     unsigned int bitOffset = 7;
-    unsigned int subSamplingMult = 3;
+    unsigned int subSamplingMult;
+    unsigned short restartCounter = 0;
 
     for(int i = 0; i<dataInfo.numComponents; ++i){
         components[i].huffmanTableDC = dataInfo.component[i].huffmanTableDC;
@@ -281,8 +299,32 @@ int getFirstProgressiveDCs(DataInfo & dataInfo, std::vector<Component> & compone
 
                 if(coeffLength!=0){ // If its 0, the result should be 0, which is already the value outputBlock.blockData[0] has
                     coeff = getCoefficient(dataInfo.scanData, byteOffset, bitOffset, coeffLength);
-                    component.blocks[i*subSamplingMult + j].blockData[0] =  coeff << dataInfo.newRefinementPos;
+                    coeff = coeff << dataInfo.newRefinementPos;
+                }else{
+                    coeff = 0;
                 }
+
+                /// In progressive jpgs the differential encoding it's applied in the first DC block
+                /// so we reverse it now
+                coeff += component.prevDC;
+                component.prevDC = coeff;
+
+                component.blocks[i*subSamplingMult + j].blockData[0] = coeff;
+            }
+        }
+
+        ++restartCounter;
+        if(dataInfo.restartInterval > 0 && restartCounter == dataInfo.restartInterval){
+            restartCounter = 0;
+
+            for(auto & component : components){
+                component.prevDC = 0;
+            }
+
+
+            if(usesRestartMarkers  && bitOffset!=7){
+                ++byteOffset;
+                bitOffset = 7;
             }
         }
     }
@@ -292,6 +334,7 @@ int getFirstProgressiveDCs(DataInfo & dataInfo, std::vector<Component> & compone
 
 
 int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
+                           bool usesRestartMarkers,
                            bool verticalFilling, bool horizontalFilling, 
                            int blockHeight, int blockWidth,
                            JpgHuffmanTree & acHuffmanTree, unsigned char (& zigzagTable)[64]){
@@ -305,6 +348,7 @@ int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
     unsigned char coeffLength;
     unsigned int byteOffset = 0;
     unsigned int bitOffset = 7;
+    unsigned short restartCounter = 0;
 
 
     int realWidth = blockWidth*component.horizontalSampling;
@@ -312,7 +356,17 @@ int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
     int widthToCover = blockWidth*component.horizontalSampling - (horizontalFilling ? 1 : 0);
 
     for(int blockY = 0; blockY<heightToCover && !err; ++blockY){
-        for(int blockX = 0; blockX<widthToCover && !err; ++blockX){
+        for(int blockX = 0; blockX<widthToCover && !err; ++blockX, ++restartCounter){
+
+            // Restart interval handdling (In case the image has)
+            if(usesRestartMarkers && dataInfo.restartInterval > 0 && restartCounter == dataInfo.restartInterval){
+                restartCounter = 0;
+
+                if(bitOffset!=7){
+                    ++byteOffset;
+                    bitOffset = 7;
+                }
+            }
 
             // Do we have to skip the block?
             if(skips>0){
@@ -386,7 +440,8 @@ int getFirstProgressiveACs(DataInfo & dataInfo, Component & component,
 
 /// Refinement functions
 
-int applyRefinementToDC(DataInfo & dataInfo, std::vector<Component> & components,
+int applyRefinementToDC(DataInfo & dataInfo, std::vector<Component> & components, 
+                        bool usesRestartMarkers,
                         unsigned short blockHeight, unsigned short blockWidth){
 
     unsigned int subSamplingMult;
@@ -394,6 +449,7 @@ int applyRefinementToDC(DataInfo & dataInfo, std::vector<Component> & components
     unsigned int bitOffset = 7;
     unsigned char currentByte = dataInfo.scanData[byteOffset];
     unsigned char bitMultiplier = 1 << bitOffset; 
+    unsigned char restartCounter = 0;
 
     for(int i = 0; i < blockHeight*blockWidth; ++i){
         
@@ -413,13 +469,22 @@ int applyRefinementToDC(DataInfo & dataInfo, std::vector<Component> & components
             }
         }
 
+        ++restartCounter;
+        if(usesRestartMarkers && dataInfo.restartInterval > 0 && restartCounter == dataInfo.restartInterval){
+            restartCounter = 0;
+
+            if(bitOffset!=7){
+                ++byteOffset;
+                bitOffset = 7;
+            }
+        }
     }
 
     return 0;
 }
 
 
-int applyRefinementToACs(DataInfo & dataInfo, Component & component,
+int applyRefinementToACs(DataInfo & dataInfo, Component & component, bool usesRestartMarkers,
                          bool verticalFilling, bool horizontalFilling, 
                          int blockHeight, int blockWidth,
                          JpgHuffmanTree & acHuffmanTree, unsigned char (& zigzagTable)[64]){
@@ -433,6 +498,7 @@ int applyRefinementToACs(DataInfo & dataInfo, Component & component,
     unsigned char coeffLength;
     unsigned int byteOffset = 0;
     unsigned int bitOffset = 7;
+    unsigned short restartCounter = 0;
     int refinementPositive = 1 << dataInfo.newRefinementPos;
 
     int realWidth = blockWidth*component.horizontalSampling;
@@ -440,7 +506,7 @@ int applyRefinementToACs(DataInfo & dataInfo, Component & component,
     int widthToCover = blockWidth*component.horizontalSampling - (horizontalFilling ? 1 : 0);
 
     for(int blockY = 0; blockY<heightToCover && !err; ++blockY){
-        for(int blockX = 0; blockX<widthToCover && !err; ++blockX){
+        for(int blockX = 0; blockX<widthToCover && !err; ++blockX, ++restartCounter){
 
             if(component.verticalSampling>1){
                 blockPos = blockY*realWidth + blockX*2 - (blockY%2 ? realWidth-1 : 0);
@@ -457,6 +523,16 @@ int applyRefinementToACs(DataInfo & dataInfo, Component & component,
                 
             }else{
                 blockPos = blockY*realWidth + blockX;
+            }
+
+            // Restart interval handdling (In case the image has)
+            if(usesRestartMarkers && dataInfo.restartInterval > 0 && restartCounter == dataInfo.restartInterval){
+                restartCounter = 0;
+
+                if(bitOffset!=7){
+                    ++byteOffset;
+                    bitOffset = 7;
+                }
             }
 
             if(skips > 0){
@@ -721,6 +797,4 @@ int checkIfLastBlocksHaveOnlyZeroes(DataInfo & dataInfo, unsigned char firstBloc
     }
 
     return 0;                      
-    
-
 }

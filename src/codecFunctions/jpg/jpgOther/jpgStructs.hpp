@@ -22,6 +22,7 @@ struct Component{
     unsigned char quatizationTable;
     unsigned char huffmanTableDC;
     unsigned char huffmanTableAC;
+    int prevDC = 0;
     std::vector<JpgBlock> blocks;
 };
 
@@ -45,6 +46,7 @@ struct DataInfo{
     unsigned char currentRefinementPos;
     unsigned char newRefinementPos;
 
+    unsigned short restartInterval;
     std::vector<JpgHuffmanTree> acTrees;
 };
 
