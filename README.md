@@ -56,13 +56,12 @@ make
 - zlib (Tested with version 1.3)
 
 ## Future plans
-**Image Format Transmuter** its currently in version 0.5.0.
+**Image Format Transmuter** its currently in version 0.6.0.
 
 To reach version 1.0.0, it should have support for at least the PNG, JPG and BMP formats, both for encoding and decoding. With special emphasis in the decoding process, since it should allow any images with these extensions.
 
 #### Key features currently missing:
 - JPG encoder
-- Decoding JPG with restart intervals
 - Decoding PNG images with interlacing
 
 #### Planed features after version 1.0.0:
