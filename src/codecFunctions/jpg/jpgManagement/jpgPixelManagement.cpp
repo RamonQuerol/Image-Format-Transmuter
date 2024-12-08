@@ -5,6 +5,14 @@
 
 /// General function prototypes
 
+// Encoding
+
+void pixelsToColor444(unsigned short height, unsigned short width,
+                      std::unique_ptr<Pixel []> & inputPixels, std::vector<JpgBlock> & yBlocks, 
+                      std::vector<JpgBlock> & cbBlocks, std::vector<JpgBlock> & crBlocks);
+
+// Decoding
+
 void color444ToPixels(unsigned short height, unsigned short width,
                    std::vector<JpgBlock> & yBlocks, std::vector<JpgBlock> & cbBlocks, 
                    std::vector<JpgBlock> & crBlocks, std::unique_ptr<Pixel []> & outputPixels);
@@ -61,9 +69,28 @@ void grayBlockToPixel(unsigned short height, unsigned short width,
 
 /// Individual pixel function prototypes
 
+void pixelToYCbCr(Pixel pixel, int & yData, int & cbData, int & crData);
+
 Pixel yCbCrToPixel(int yData, int cbData, int crData);
 
 /// Main Functions
+
+
+int pixelsToBlocks(unsigned short height, unsigned short width, JpgType jpgType,
+                    std::unique_ptr<Pixel []> & inputPixels, std::vector<Component> & components){
+    switch (jpgType){
+    case COLOR_4_4_4:
+        pixelsToColor444(height, width, inputPixels, components[0].blocks, 
+                         components[1].blocks, components[2].blocks);
+        break;
+    default:
+        std::cerr << "The encoding jpg subsampling type its not suported by the current implementation\n";
+        return -1;
+        break;
+    }
+
+    return 0;
+}
 
 
 void blocksToPixels(unsigned short height, unsigned short width, JpgType jpgType,
@@ -96,6 +123,36 @@ void blocksToPixels(unsigned short height, unsigned short width, JpgType jpgType
 }
 
 /// General functions
+
+// Encoding
+
+void pixelsToColor444(unsigned short height, unsigned short width,
+                      std::unique_ptr<Pixel []> & inputPixels, std::vector<JpgBlock> & yBlocks, 
+                      std::vector<JpgBlock> & cbBlocks, std::vector<JpgBlock> & crBlocks){
+
+    Pixel pixel;
+    int blockPos = 0;
+    int posInBlock = 0;
+    int blocksPerColumn = height/8 + (height%8 ? 1 : 0);
+    int blocksPerRow = width/8 + (width%8 ? 1 : 0);
+
+    yBlocks = std::vector<JpgBlock>(blocksPerRow*blocksPerColumn);
+    cbBlocks = std::vector<JpgBlock>(blocksPerRow*blocksPerColumn);
+    crBlocks = std::vector<JpgBlock>(blocksPerRow*blocksPerColumn);
+
+    for(int i = 0; i<height; ++i){
+        for(int j = 0; j<width; ++j){
+            
+            blockPos = (i/8)*blocksPerRow + j/8;
+            posInBlock = (i%8)*8 + j%8;
+
+            pixelToYCbCr(inputPixels[i*width + j], yBlocks[blockPos].blockData[posInBlock],
+                        cbBlocks[blockPos].blockData[posInBlock], crBlocks[blockPos].blockData[posInBlock]);
+        }
+    }
+}
+
+// Decoding
 
 void color444ToPixels(unsigned short height, unsigned short width,
                       std::vector<JpgBlock> & yBlocks, std::vector<JpgBlock> & cbBlocks, 
@@ -335,6 +392,35 @@ void grayBlockToPixel(unsigned short height, unsigned short width,
 }
 
 /// Pixel functions
+
+void pixelToYCbCr(Pixel pixel, int & yData, int & cbData, int & crData){
+
+    yData = 0.299*pixel.red + 0.587*pixel.green + 0.114*pixel.blue -128;
+    cbData = - 0.1687*pixel.red - 0.3312*pixel.green + 0.5*pixel.blue;
+    crData = 0.5*pixel.red - 0.4187*pixel.green  - 0.0813*pixel.blue;
+
+    /// Iluminance
+    if(yData < -128){
+        yData = -128;
+    }else if(yData > 127){
+        yData = 127;
+    }
+
+    /// Blue difference
+    if(cbData < -128){
+        cbData = -128;
+    }else if(cbData > 127){
+        cbData = 127;
+    }
+
+    /// Red difference
+    if(crData < -128){
+        crData = -128;
+    }else if(crData > 127){
+        crData = 127;
+    }
+}
+
 
 Pixel yCbCrToPixel(int yData, int cbData, int crData){
 

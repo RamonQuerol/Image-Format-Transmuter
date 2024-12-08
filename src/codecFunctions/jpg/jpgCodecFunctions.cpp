@@ -22,7 +22,27 @@
 #include "configEnums.hpp"
 
 
+int encodeJPG(std::fstream & outputFile, Image & image){
 
+    //// Variables
+
+    /// Component managing
+    std::vector<Component> components;
+    int numComponents = 3;
+    
+    JpgType jpgType = COLOR_4_4_4;
+
+
+    //// Transforming the Pixels to blocks
+
+    components = std::vector<Component>(numComponents);
+
+    if(pixelsToBlocks(image.heigth, image.width, jpgType, image.imageData, components)){
+        return -1;
+    }
+
+    return 0;
+}
 
 
 int decodeJPG(std::fstream & inputFile, Image & decodedImage){

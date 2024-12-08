@@ -134,6 +134,10 @@ int main(int argc, char* argv[]){
         case PNG:
             err = encodePNG(outputFile, decodedImage);
             break;
+        case JPG:
+            err = encodeJPG(outputFile, decodedImage);
+            return err;
+            break;
         case UNDEFINED_FORMAT:
             outputFile.close();
             std::cerr << "You must define the output file format. Use --help to know more.\n";
