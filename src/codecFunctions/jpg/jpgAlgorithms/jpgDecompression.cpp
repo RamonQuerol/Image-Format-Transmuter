@@ -1,4 +1,4 @@
-#include "jpgCompression.hpp"
+#include "jpgDecompression.hpp"
 
 #include <iostream>
 #include <cstring>
