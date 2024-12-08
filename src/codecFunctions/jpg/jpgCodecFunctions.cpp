@@ -33,9 +33,18 @@ int encodeJPG(std::fstream & outputFile, Image & image){
     JpgType jpgType = COLOR_4_4_4;
 
 
-    //// Transforming the Pixels to blocks
+    /// Quatization
+    QuantificationTable quantificationTables[2];
 
+    
+    //// Initializing components
     components = std::vector<Component>(numComponents);
+
+    components[0].quatizationTable = 0;
+    components[1].quatizationTable = 1;
+    components[2].quatizationTable = 1;
+    
+    //// Transforming the Pixels to blocks
 
     if(pixelsToBlocks(image.heigth, image.width, jpgType, image.imageData, components)){
         return -1;
@@ -47,6 +56,14 @@ int encodeJPG(std::fstream & outputFile, Image & image){
         applyDCT(component.blocks);
     }
 
+    //// Quantization
+
+    quantificationTables[0] = Y90_table;
+    quantificationTables[1] = C90_table;
+
+    for(auto &component : components){
+        applyQuantization(quantificationTables[component.quatizationTable], component.blocks);
+    }
 
     return 0;
 }
