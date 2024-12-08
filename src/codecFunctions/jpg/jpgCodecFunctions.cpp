@@ -41,6 +41,13 @@ int encodeJPG(std::fstream & outputFile, Image & image){
         return -1;
     }
 
+    //// DCT
+
+    for(auto &component : components){
+        applyDCT(component.blocks);
+    }
+
+
     return 0;
 }
 
